@@ -389,7 +389,7 @@ export default function ChallengeMap() {
         scale: 2,
       });
       const link = document.createElement("a");
-      link.download = "challenge-map.png";
+      link.download = "deeproot.png";
       link.href = canvas.toDataURL("image/png");
       link.click();
     } finally {
@@ -407,7 +407,7 @@ export default function ChallengeMap() {
         {/* Header */}
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: "12px 16px", background: "rgba(248,249,250,0.92)", backdropFilter: "blur(8px)", borderBottom: "1px solid #E9ECEF", display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 700, color: "#212529", letterSpacing: "-0.02em" }}>CHALLENGE MAP</span>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 700, color: "#212529", letterSpacing: "-0.02em" }}>DEEPROOT</span>
             <span style={{ fontSize: 10, color: "#ADB5BD" }}>{nodes.length} node{nodes.length !== 1 ? "s" : ""}</span>
           </div>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
