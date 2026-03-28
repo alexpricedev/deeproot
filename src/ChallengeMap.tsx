@@ -515,6 +515,20 @@ export default function ChallengeMap() {
     return 1;
   });
   const [enableHashSave, setEnableHashSave] = useState<boolean>(initial !== null);
+  const [tutorialRevealed, setTutorialRevealed] = useState<Set<string>>(new Set());
+
+  // Inject tutorial CSS animations
+  useEffect(() => {
+    if (document.getElementById("tutorial-animations")) return;
+    const style = document.createElement("style");
+    style.id = "tutorial-animations";
+    style.textContent = `
+      @keyframes tutorialFadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+      .tutorial-node-enter { animation: tutorialFadeIn 0.3s ease-out forwards; }
+    `;
+    document.head.appendChild(style);
+    return () => { style.remove(); };
+  }, []);
 
   const [nodes, setNodes] = useState<MapNode[]>(initial?.nodes ?? []);
   const [edges, setEdges] = useState<MapEdge[]>(initial?.edges ?? []);
@@ -533,6 +547,20 @@ export default function ChallengeMap() {
   const treeRef = useRef<HTMLDivElement>(null);
 
   const positions = useMemo(() => computeLayout(nodes, edges), [nodes, edges]);
+
+  const tutorialPlaceholderPositions = useMemo(() => {
+    const goalPos = positions["tutorial-goal"];
+    if (!goalPos) return null;
+    const row1Y = goalPos.y + NODE_H + V_GAP;
+    const row2Y = goalPos.y + 2 * (NODE_H + V_GAP);
+    return {
+      constraint: { x: goalPos.x - NODE_W - H_GAP / 2, y: row1Y },
+      consideration: { x: goalPos.x, y: row1Y },
+      action: { x: goalPos.x + NODE_W + H_GAP / 2, y: row1Y },
+      actionSub1: { x: goalPos.x - NODE_W - H_GAP / 2, y: row2Y },
+      actionSub2: { x: goalPos.x, y: row2Y },
+    };
+  }, [positions]);
 
   // Center the root node horizontally on first load
   useEffect(() => {
@@ -699,6 +727,354 @@ export default function ChallengeMap() {
               setTutorialStep(-1);
             }}
           />
+        )}
+
+        {/* Tutorial Stage 2: The Goal */}
+        {tutorialStep === 2 && (
+          <TutorialTooltip
+            targetNodeId="tutorial-goal"
+            positions={positions}
+            panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
+            color={NODE_TYPES.goal.color}
+            canvasRef={canvasRef}
+          >
+            <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>This is your goal.</h4>
+            <p style={{ margin: "0 0 14px 0", fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
+              The thing you want to achieve. Everything else on this map exists to make it happen.
+            </p>
+            <button
+              onClick={() => setTutorialStep(3)}
+              style={{
+                fontSize: 13, fontWeight: 600, padding: "8px 18px",
+                background: NODE_TYPES.goal.color, color: "#fff",
+                border: "none", borderRadius: 6, cursor: "pointer",
+              }}
+            >
+              {"Continue \u2192"}
+            </button>
+          </TutorialTooltip>
+        )}
+
+        {/* Tutorial Stage 3: The Constraint */}
+        {tutorialStep === 3 && tutorialPlaceholderPositions && (
+          <>
+            {!tutorialRevealed.has("constraint") && (
+              <>
+                {/* Dashed connection line from goal to constraint placeholder */}
+                <div style={{ transform: `translate(${pan?.x ?? 0}px, ${pan?.y ?? 0}px)`, position: "absolute", top: 50, left: 0, pointerEvents: "none" }}>
+                  <svg style={{ position: "absolute", top: 0, left: 0, width: canvasW + 500, height: canvasH + 500, pointerEvents: "none" }}>
+                    {(() => {
+                      const goalPos = positions["tutorial-goal"];
+                      if (!goalPos) return null;
+                      const cp = tutorialPlaceholderPositions.constraint;
+                      const x1 = goalPos.x + NODE_W / 2;
+                      const y1 = goalPos.y + NODE_H;
+                      const x2 = cp.x + NODE_W / 2;
+                      const y2 = cp.y;
+                      const midY = (y1 + y2) / 2;
+                      return (
+                        <path
+                          d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
+                          stroke="#CED4DA"
+                          strokeWidth="1.5"
+                          strokeDasharray="6 4"
+                          fill="none"
+                        />
+                      );
+                    })()}
+                  </svg>
+                </div>
+                {/* Placeholder node */}
+                <div style={{ transform: `translate(${pan?.x ?? 0}px, ${pan?.y ?? 0}px)`, position: "absolute", top: 50, left: 0, pointerEvents: "auto" }}>
+                  <PlaceholderNode
+                    pos={tutorialPlaceholderPositions.constraint}
+                    color={NODE_TYPES.constraint.color}
+                    onClick={() => {
+                      setNodes((prev) => [...prev, { id: "tutorial-constraint", label: "No cold weather gear", type: "constraint", status: "open", notes: "" }]);
+                      setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-constraint" }]);
+                      setTutorialRevealed((prev) => new Set(prev).add("constraint"));
+                    }}
+                  />
+                </div>
+                {/* Tooltip near the goal node */}
+                <TutorialTooltip
+                  targetNodeId="tutorial-goal"
+                  positions={positions}
+                  panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
+                  color={NODE_TYPES.constraint.color}
+                  canvasRef={canvasRef}
+                >
+                  <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>What's standing in your way?</h4>
+                  <p style={{ margin: 0, fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
+                    Click the dashed box below to reveal a constraint.
+                  </p>
+                </TutorialTooltip>
+              </>
+            )}
+            {tutorialRevealed.has("constraint") && (
+              <TutorialTooltip
+                targetNodeId="tutorial-constraint"
+                positions={positions}
+                panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
+                color={NODE_TYPES.constraint.color}
+                canvasRef={canvasRef}
+              >
+                <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>{"That\u2019s a constraint."}</h4>
+                <p style={{ margin: "0 0 14px 0", fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
+                  It blocks your goal until you deal with it.
+                </p>
+                <button
+                  onClick={() => setTutorialStep(4)}
+                  style={{
+                    fontSize: 13, fontWeight: 600, padding: "8px 18px",
+                    background: "#2F9E44", color: "#fff",
+                    border: "none", borderRadius: 6, cursor: "pointer",
+                  }}
+                >
+                  {"Continue \u2192"}
+                </button>
+              </TutorialTooltip>
+            )}
+          </>
+        )}
+
+        {/* Tutorial Stage 4: The Consideration */}
+        {tutorialStep === 4 && tutorialPlaceholderPositions && (
+          <>
+            {!tutorialRevealed.has("consideration") && (
+              <>
+                {/* Dashed connection line from goal to consideration placeholder */}
+                <div style={{ transform: `translate(${pan?.x ?? 0}px, ${pan?.y ?? 0}px)`, position: "absolute", top: 50, left: 0, pointerEvents: "none" }}>
+                  <svg style={{ position: "absolute", top: 0, left: 0, width: canvasW + 500, height: canvasH + 500, pointerEvents: "none" }}>
+                    {(() => {
+                      const goalPos = positions["tutorial-goal"];
+                      if (!goalPos) return null;
+                      const cp = tutorialPlaceholderPositions.consideration;
+                      const x1 = goalPos.x + NODE_W / 2;
+                      const y1 = goalPos.y + NODE_H;
+                      const x2 = cp.x + NODE_W / 2;
+                      const y2 = cp.y;
+                      const midY = (y1 + y2) / 2;
+                      return (
+                        <path
+                          d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
+                          stroke="#CED4DA"
+                          strokeWidth="1.5"
+                          strokeDasharray="6 4"
+                          fill="none"
+                        />
+                      );
+                    })()}
+                  </svg>
+                </div>
+                {/* Placeholder node */}
+                <div style={{ transform: `translate(${pan?.x ?? 0}px, ${pan?.y ?? 0}px)`, position: "absolute", top: 50, left: 0, pointerEvents: "auto" }}>
+                  <PlaceholderNode
+                    pos={tutorialPlaceholderPositions.consideration}
+                    color={NODE_TYPES.consideration.color}
+                    onClick={() => {
+                      setNodes((prev) => [...prev, { id: "tutorial-consideration", label: "Best season: July-Sept", type: "consideration", status: "open", notes: "" }]);
+                      setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-consideration" }]);
+                      setTutorialRevealed((prev) => new Set(prev).add("consideration"));
+                    }}
+                  />
+                </div>
+                {/* Tooltip near the goal node */}
+                <TutorialTooltip
+                  targetNodeId="tutorial-goal"
+                  positions={positions}
+                  panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
+                  color={NODE_TYPES.consideration.color}
+                  canvasRef={canvasRef}
+                >
+                  <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>What do you need to keep in mind?</h4>
+                  <p style={{ margin: 0, fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
+                    Click the dashed box below to reveal a consideration.
+                  </p>
+                </TutorialTooltip>
+              </>
+            )}
+            {tutorialRevealed.has("consideration") && (
+              <TutorialTooltip
+                targetNodeId="tutorial-consideration"
+                positions={positions}
+                panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
+                color={NODE_TYPES.consideration.color}
+                canvasRef={canvasRef}
+              >
+                <p style={{ margin: "0 0 14px 0", fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
+                  {"Constraints block. Considerations inform. Now let\u2019s figure out what to actually do."}
+                </p>
+                <button
+                  onClick={() => setTutorialStep(5)}
+                  style={{
+                    fontSize: 13, fontWeight: 600, padding: "8px 18px",
+                    background: "#7048E8", color: "#fff",
+                    border: "none", borderRadius: 6, cursor: "pointer",
+                  }}
+                >
+                  {"Continue \u2192"}
+                </button>
+              </TutorialTooltip>
+            )}
+          </>
+        )}
+
+        {/* Tutorial Stage 5: The Actions */}
+        {tutorialStep === 5 && tutorialPlaceholderPositions && (
+          <>
+            {!tutorialRevealed.has("action") && (
+              <>
+                {/* Dashed connection line from goal to action placeholder */}
+                <div style={{ transform: `translate(${pan?.x ?? 0}px, ${pan?.y ?? 0}px)`, position: "absolute", top: 50, left: 0, pointerEvents: "none" }}>
+                  <svg style={{ position: "absolute", top: 0, left: 0, width: canvasW + 500, height: canvasH + 500, pointerEvents: "none" }}>
+                    {(() => {
+                      const goalPos = positions["tutorial-goal"];
+                      if (!goalPos) return null;
+                      const ap = tutorialPlaceholderPositions.action;
+                      const x1 = goalPos.x + NODE_W / 2;
+                      const y1 = goalPos.y + NODE_H;
+                      const x2 = ap.x + NODE_W / 2;
+                      const y2 = ap.y;
+                      const midY = (y1 + y2) / 2;
+                      return (
+                        <path
+                          d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
+                          stroke="#CED4DA"
+                          strokeWidth="1.5"
+                          strokeDasharray="6 4"
+                          fill="none"
+                        />
+                      );
+                    })()}
+                  </svg>
+                </div>
+                {/* Placeholder node */}
+                <div style={{ transform: `translate(${pan?.x ?? 0}px, ${pan?.y ?? 0}px)`, position: "absolute", top: 50, left: 0, pointerEvents: "auto" }}>
+                  <PlaceholderNode
+                    pos={tutorialPlaceholderPositions.action}
+                    color={NODE_TYPES.action.color}
+                    onClick={() => {
+                      // Immediately add first action
+                      setNodes((prev) => [...prev, { id: "tutorial-action-1", label: "Book a guide service", type: "action", status: "open", notes: "" }]);
+                      setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-action-1" }]);
+                      setTutorialRevealed((prev) => new Set(prev).add("action"));
+
+                      // After 400ms: add second action
+                      setTimeout(() => {
+                        setNodes((prev) => [...prev, { id: "tutorial-action-2", label: "Rent gear from REI", type: "action", status: "open", notes: "" }]);
+                        setEdges((prev) => [...prev, { from: "tutorial-constraint", to: "tutorial-action-2" }]);
+                      }, 400);
+
+                      // After 800ms: add third action, then advance
+                      setTimeout(() => {
+                        setNodes((prev) => [...prev, { id: "tutorial-action-3", label: "Plan for August trip", type: "action", status: "open", notes: "" }]);
+                        setEdges((prev) => [...prev, { from: "tutorial-consideration", to: "tutorial-action-3" }]);
+                        setTimeout(() => setTutorialStep(6), 600);
+                      }, 800);
+                    }}
+                  />
+                </div>
+                {/* Tooltip near the goal node */}
+                <TutorialTooltip
+                  targetNodeId="tutorial-goal"
+                  positions={positions}
+                  panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
+                  color={NODE_TYPES.action.color}
+                  canvasRef={canvasRef}
+                >
+                  <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>What will you actually do?</h4>
+                  <p style={{ margin: 0, fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
+                    Actions are concrete steps. Click the dashed box to reveal them.
+                  </p>
+                </TutorialTooltip>
+              </>
+            )}
+            {tutorialRevealed.has("action") && (
+              <TutorialTooltip
+                targetNodeId="tutorial-goal"
+                positions={positions}
+                panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
+                color={NODE_TYPES.action.color}
+                canvasRef={canvasRef}
+              >
+                <p style={{ margin: 0, fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
+                  Watch the map come together...
+                </p>
+              </TutorialTooltip>
+            )}
+          </>
+        )}
+
+        {/* Tutorial Stage 6: Completion */}
+        {tutorialStep === 6 && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: 60,
+              right: 316,
+              maxWidth: 340,
+              background: "#FFFFFF",
+              borderRadius: 12,
+              padding: "24px",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+              zIndex: 50,
+              fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+            }}
+          >
+            <div style={{ fontSize: 32, marginBottom: 8 }}>{"\uD83C\uDF89"}</div>
+            <h4 style={{ margin: "0 0 8px 0", fontSize: 16, color: "#212529", fontWeight: 700 }}>
+              You just decomposed a goal.
+            </h4>
+            <p style={{ margin: "0 0 20px 0", fontSize: 13, color: "#495057", lineHeight: 1.6 }}>
+              {"Constraints, considerations, and actions \u2014 that\u2019s the whole system. Now try it with something you actually care about."}
+            </p>
+            <button
+              onClick={() => {
+                localStorage.setItem("deeproot-tutorial-completed", "true");
+                setNodes([]);
+                setEdges([]);
+                setTutorialRevealed(new Set());
+                setEnableHashSave(true);
+                setSelectedId(null);
+                setTutorialStep(-1);
+              }}
+              style={{
+                display: "block",
+                width: "100%",
+                fontSize: 13,
+                fontWeight: 600,
+                padding: "10px 20px",
+                background: NODE_TYPES.goal.color,
+                color: "#fff",
+                border: "none",
+                borderRadius: 6,
+                cursor: "pointer",
+                marginBottom: 8,
+              }}
+            >
+              {"Start my own map \u2192"}
+            </button>
+            <button
+              onClick={() => {
+                localStorage.setItem("deeproot-tutorial-completed", "true");
+                setTutorialStep(-1);
+              }}
+              style={{
+                display: "block",
+                width: "100%",
+                fontSize: 12,
+                padding: "8px 20px",
+                background: "none",
+                border: "none",
+                color: "#868E96",
+                cursor: "pointer",
+                textDecoration: "underline",
+              }}
+            >
+              Keep exploring this one
+            </button>
+          </div>
         )}
 
         {tutorialStep >= 2 && tutorialStep <= 6 && (
