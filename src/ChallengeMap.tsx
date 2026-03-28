@@ -162,9 +162,11 @@ function NodeCard({
 }) {
   const typeStyle = NODE_TYPES[node.type];
   const statusStyle = STATUS[node.status];
+  const isTutorialNode = node.id.startsWith("tutorial-");
 
   return (
     <div
+      className={isTutorialNode ? "tutorial-node-enter" : undefined}
       onClick={(e) => {
         e.stopPropagation();
         onSelect(node.id);
@@ -591,7 +593,7 @@ export default function ChallengeMap() {
         setPan({ x: 0, y: 0 });
       }
     }
-  }, [pan, positions, nodes]);
+  }, [pan, positions, nodes, tutorialStep]);
   const selectedNode = nodes.find((n) => n.id === selectedId);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
@@ -623,6 +625,8 @@ export default function ChallengeMap() {
   }, [handleMouseMove, handleMouseUp]);
 
   const newNodeId = useRef<string | null>(null);
+  const tutorialTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => tutorialTimers.current.forEach(clearTimeout), []);
 
   const addChild = useCallback((parentId: string) => {
     if (!enableHashSaveRef.current) setEnableHashSave(true);
@@ -825,14 +829,14 @@ export default function ChallengeMap() {
                 setNodes((prev) => [...prev, { id: "tutorial-action-1", label: "Book a guide service", type: "action", status: "open", notes: "" }]);
                 setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-action-1" }]);
                 setTutorialRevealed((prev) => new Set(prev).add("action"));
-                setTimeout(() => {
+                tutorialTimers.current.push(setTimeout(() => {
                   setNodes((prev) => [...prev, { id: "tutorial-action-2", label: "Rent gear from REI", type: "action", status: "open", notes: "" }]);
                   setEdges((prev) => [...prev, { from: "tutorial-constraint", to: "tutorial-action-2" }]);
-                }, 400);
-                setTimeout(() => {
+                }, 400));
+                tutorialTimers.current.push(setTimeout(() => {
                   setNodes((prev) => [...prev, { id: "tutorial-action-3", label: "Plan for August trip", type: "action", status: "open", notes: "" }]);
                   setEdges((prev) => [...prev, { from: "tutorial-consideration", to: "tutorial-action-3" }]);
-                  setTimeout(() => setTutorialStep(6), 600);
+                  tutorialTimers.current.push(setTimeout(() => setTutorialStep(6), 600));
                 }, 800);
               }}
             />
