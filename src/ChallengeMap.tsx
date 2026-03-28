@@ -837,7 +837,7 @@ export default function ChallengeMap() {
                   setNodes((prev) => [...prev, { id: "tutorial-action-3", label: "Plan for August trip", type: "action", status: "open", notes: "" }]);
                   setEdges((prev) => [...prev, { from: "tutorial-consideration", to: "tutorial-action-3" }]);
                   tutorialTimers.current.push(setTimeout(() => setTutorialStep(6), 600));
-                }, 800);
+                }, 800));
               }}
             />
           )}
