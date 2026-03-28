@@ -1,10 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import html2canvas from "html2canvas";
 
-const DEFAULT_NODES: MapNode[] = [
-  { id: "root", label: "Regular, progressing airsports sessions", type: "goal", status: "open", notes: "" },
-];
-
 function saveToHash(nodes: MapNode[], edges: MapEdge[]) {
   try {
     const data = JSON.stringify({ nodes, edges });
@@ -154,6 +150,7 @@ function NodeCard({
   isSelected,
   onAddChild,
   childCount,
+  hideDep,
 }: {
   node: MapNode;
   pos: Position;
@@ -161,12 +158,15 @@ function NodeCard({
   isSelected: boolean;
   onAddChild: (id: string) => void;
   childCount: number;
+  hideDep?: boolean;
 }) {
   const typeStyle = NODE_TYPES[node.type];
   const statusStyle = STATUS[node.status];
+  const isTutorialNode = node.id.startsWith("tutorial-");
 
   return (
     <div
+      className={isTutorialNode ? "tutorial-node-enter" : undefined}
       onClick={(e) => {
         e.stopPropagation();
         onSelect(node.id);
@@ -213,21 +213,23 @@ function NodeCard({
         {childCount > 0 ? (
           <span style={{ fontSize: 9, color: "#ADB5BD" }}>{childCount} dep{childCount !== 1 ? "s" : ""}</span>
         ) : <span />}
-        <button
-          onClick={(e) => { e.stopPropagation(); onAddChild(node.id); }}
-          style={{ fontSize: 9, padding: "2px 8px", background: "none", border: "1px solid #DEE2E6", borderRadius: 3, color: "#868E96", cursor: "pointer", fontFamily: "inherit" }}
-          onMouseEnter={(e) => { (e.target as HTMLButtonElement).style.borderColor = typeStyle.border; (e.target as HTMLButtonElement).style.color = typeStyle.color; }}
-          onMouseLeave={(e) => { (e.target as HTMLButtonElement).style.borderColor = "#DEE2E6"; (e.target as HTMLButtonElement).style.color = "#868E96"; }}
-        >
-          + dep
-        </button>
+        {!hideDep && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onAddChild(node.id); }}
+            style={{ fontSize: 9, padding: "2px 8px", background: "none", border: "1px solid #DEE2E6", borderRadius: 3, color: "#868E96", cursor: "pointer", fontFamily: "inherit" }}
+            onMouseEnter={(e) => { (e.target as HTMLButtonElement).style.borderColor = typeStyle.border; (e.target as HTMLButtonElement).style.color = typeStyle.color; }}
+            onMouseLeave={(e) => { (e.target as HTMLButtonElement).style.borderColor = "#DEE2E6"; (e.target as HTMLButtonElement).style.color = "#868E96"; }}
+          >
+            + dep
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
 
-function EditPanel({ node, onUpdate, onDelete, onClose, autoFocusLabel }: { node: MapNode; onUpdate: (n: MapNode) => void; onDelete: (id: string) => void; onClose: () => void; autoFocusLabel?: boolean }) {
+function EditPanel({ node, onUpdate, onDelete, onAddChild, onClose, autoFocusLabel }: { node: MapNode; onUpdate: (n: MapNode) => void; onDelete: (id: string) => void; onAddChild: (id: string) => void; onClose: () => void; autoFocusLabel?: boolean }) {
   const labelRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -273,24 +275,237 @@ function EditPanel({ node, onUpdate, onDelete, onClose, autoFocusLabel }: { node
         placeholder="Add notes, reflections, or context..." rows={4}
         style={{ width: "100%", fontSize: 12, padding: "8px", border: "1px solid #DEE2E6", borderRadius: 4, outline: "none", marginBottom: 12, resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
 
-      <button onClick={() => onDelete(node.id)}
-        style={{ fontSize: 10, padding: "6px 12px", background: "none", border: "1px solid #E03131", borderRadius: 4, color: "#E03131", cursor: "pointer", fontFamily: "inherit" }}>
-        Delete node
-      </button>
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <button onClick={() => onAddChild(node.id)}
+          style={{ fontSize: 10, padding: "6px 12px", background: "#F8F9FA", border: "1px solid #ADB5BD", borderRadius: 4, color: "#495057", cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>
+          + Dep
+        </button>
+        <button onClick={() => onDelete(node.id)}
+          style={{ fontSize: 10, padding: "6px 12px", background: "none", border: "1px solid #E03131", borderRadius: 4, color: "#E03131", cursor: "pointer", fontFamily: "inherit" }}>
+          Delete node
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Tutorial Components ─────────────────────────────────────────────── */
+
+function WelcomeOverlay({ onStart, onSkip }: { onStart: () => void; onSkip: () => void }) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        background: "rgba(248,249,250,0.85)",
+        backdropFilter: "blur(4px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 100,
+      }}
+    >
+      <div
+        style={{
+          background: "#FFFFFF",
+          borderRadius: 12,
+          padding: "40px 36px",
+          maxWidth: 480,
+          width: "90%",
+          textAlign: "center",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        }}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#868E96" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 16 }}><path d="m8 3 4 8 5-5 5 15H2L8 3z"/><path d="M4.14 15.08c2.62-1.57 5.24-1.43 7.86.42 2.74 1.94 5.49 2 8.23.19"/></svg>
+        <h1
+          style={{
+            fontSize: 22,
+            fontWeight: 600,
+            color: "#212529",
+            margin: "0 0 12px 0",
+            lineHeight: 1.4,
+            fontFamily: "inherit",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          Every big goal is a system of smaller ones.
+        </h1>
+        <p
+          style={{
+            fontSize: 14,
+            color: "#495057",
+            lineHeight: 1.6,
+            margin: "0 0 28px 0",
+          }}
+        >
+          Deeproot helps you break down ambitious goals into constraints,
+          considerations, and concrete actions. Let's walk through a quick
+          example together.
+        </p>
+        <button
+          onClick={onStart}
+          style={{
+            fontSize: 14,
+            fontWeight: 600,
+            padding: "12px 28px",
+            background: NODE_TYPES.goal.color,
+            color: "#FFFFFF",
+            border: "none",
+            borderRadius: 8,
+            cursor: "pointer",
+            marginBottom: 12,
+            fontFamily: "inherit",
+          }}
+        >
+          {"Start the climb \u2192"}
+        </button>
+        <div>
+          <button
+            onClick={onSkip}
+            style={{
+              fontSize: 12,
+              color: "#868E96",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              textDecoration: "underline",
+              fontFamily: "inherit",
+            }}
+          >
+            Skip tutorial
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TutorialTooltip({
+  targetNodeId,
+  positions,
+  panOffset,
+  color,
+  children,
+  canvasRef,
+}: {
+  targetNodeId: string;
+  positions: Record<string, Position>;
+  panOffset: { x: number; y: number };
+  color: string;
+  children: React.ReactNode;
+  canvasRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const pos = positions[targetNodeId];
+  if (!pos) return null;
+
+  const left = pos.x + NODE_W + 16 + panOffset.x;
+  const top = pos.y + panOffset.y + 50; // 50px header offset
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left,
+        top,
+        maxWidth: 280,
+        background: "#FFFFFF",
+        border: "1px solid #DEE2E6",
+        borderRadius: 10,
+        padding: "16px",
+        boxShadow: "0 4px 16px rgba(0,0,0,0.10)",
+        zIndex: 50,
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+
+function PlaceholderNode({
+  pos,
+  color,
+  onClick,
+}: {
+  pos: Position;
+  color: string;
+  onClick: () => void;
+}) {
+  return (
+    <div
+      tabIndex={0}
+      role="button"
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      style={{
+        position: "absolute",
+        left: pos.x,
+        top: pos.y,
+        width: NODE_W,
+        minHeight: NODE_H - 20,
+        border: `2px dashed ${color}`,
+        borderRadius: 6,
+        background: "rgba(255,255,255,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        fontSize: 12,
+        color: color,
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        fontWeight: 500,
+        boxSizing: "border-box",
+        userSelect: "none",
+      }}
+    >
+      Click to reveal
     </div>
   );
 }
 
 export default function ChallengeMap() {
   const initial = useMemo(() => loadFromHash(), []);
-  const [nodes, setNodes] = useState<MapNode[]>(initial?.nodes ?? DEFAULT_NODES);
+
+  const [tutorialStep, setTutorialStep] = useState<number>(() => {
+    if (initial !== null) return -1;
+    if (typeof window !== "undefined" && localStorage.getItem("deeproot-tutorial-completed")) return -1;
+    return 1;
+  });
+  const [enableHashSave, setEnableHashSave] = useState<boolean>(initial !== null);
+  const enableHashSaveRef = useRef(enableHashSave);
+  enableHashSaveRef.current = enableHashSave;
+  const [tutorialRevealed, setTutorialRevealed] = useState<Set<string>>(new Set());
+
+  // Inject tutorial CSS animations
+  useEffect(() => {
+    if (document.getElementById("tutorial-animations")) return;
+    const style = document.createElement("style");
+    style.id = "tutorial-animations";
+    style.textContent = `
+      @keyframes tutorialFadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+      .tutorial-node-enter { animation: tutorialFadeIn 0.3s ease-out forwards; }
+    `;
+    document.head.appendChild(style);
+    return () => { style.remove(); };
+  }, []);
+
+  const [nodes, setNodes] = useState<MapNode[]>(initial?.nodes ?? []);
   const [edges, setEdges] = useState<MapEdge[]>(initial?.edges ?? []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sidebarTab, setSidebarTab] = useState<"edit" | "actions">("edit");
 
   useEffect(() => {
-    saveToHash(nodes, edges);
-  }, [nodes, edges]);
+    if (enableHashSave) {
+      saveToHash(nodes, edges);
+    }
+  }, [nodes, edges, enableHashSave]);
   const [pan, setPan] = useState<{ x: number; y: number } | null>(null);
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
@@ -299,19 +514,46 @@ export default function ChallengeMap() {
 
   const positions = useMemo(() => computeLayout(nodes, edges), [nodes, edges]);
 
+  const tutorialPlaceholderPositions = useMemo(() => {
+    const goalPos = positions["tutorial-goal"];
+    if (!goalPos) return null;
+    const row1Y = goalPos.y + NODE_H + V_GAP;
+    const row2Y = goalPos.y + 2 * (NODE_H + V_GAP);
+    // Position children below the goal with all positive x coordinates.
+    // Left column starts at x=40, center and right offset from there.
+    const leftX = 40;
+    const centerX = leftX + NODE_W + H_GAP;
+    const rightX = centerX + NODE_W + H_GAP;
+    return {
+      constraint: { x: leftX, y: row1Y },
+      consideration: { x: centerX, y: row1Y },
+      action: { x: rightX, y: row1Y },
+      actionSub1: { x: leftX, y: row2Y },
+      actionSub2: { x: centerX, y: row2Y },
+    };
+  }, [positions]);
+
   // Center the root node horizontally on first load
   useEffect(() => {
     if (pan === null && canvasRef.current) {
       const rootPos = positions[nodes[0]?.id];
       if (rootPos) {
         const canvasWidth = canvasRef.current.clientWidth;
-        const centerX = (canvasWidth - NODE_W) / 2 - rootPos.x;
-        setPan({ x: centerX, y: 0 });
+        // During tutorial, center the full 3-column layout instead of just the root
+        if (tutorialStep >= 1 && tutorialStep <= 6) {
+          const totalW = 3 * NODE_W + 2 * H_GAP; // width of 3 columns
+          const layoutCenterX = 40 + totalW / 2; // center of the tutorial layout
+          const centerX = canvasWidth / 2 - layoutCenterX;
+          setPan({ x: centerX, y: 20 });
+        } else {
+          const centerX = (canvasWidth - NODE_W) / 2 - rootPos.x;
+          setPan({ x: centerX, y: 0 });
+        }
       } else {
         setPan({ x: 0, y: 0 });
       }
     }
-  }, [pan, positions, nodes]);
+  }, [pan, positions, nodes, tutorialStep]);
   const selectedNode = nodes.find((n) => n.id === selectedId);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
@@ -343,8 +585,11 @@ export default function ChallengeMap() {
   }, [handleMouseMove, handleMouseUp]);
 
   const newNodeId = useRef<string | null>(null);
+  const tutorialTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => tutorialTimers.current.forEach(clearTimeout), []);
 
   const addChild = useCallback((parentId: string) => {
+    if (!enableHashSaveRef.current) setEnableHashSave(true);
     const newId = generateId();
     newNodeId.current = newId;
     setNodes((prev) => [...prev, { id: newId, label: "New dependency", type: "constraint", status: "open", notes: "" }]);
@@ -354,10 +599,12 @@ export default function ChallengeMap() {
   }, []);
 
   const updateNode = useCallback((updated: MapNode) => {
+    if (!enableHashSaveRef.current) setEnableHashSave(true);
     setNodes((prev) => prev.map((n) => (n.id === updated.id ? updated : n)));
   }, []);
 
   const deleteNode = useCallback((id: string) => {
+    if (!enableHashSaveRef.current) setEnableHashSave(true);
     if (id === "root" && nodes.length === 1) return;
     const descendants = new Set<string>();
     const findDesc = (nid: string) => { descendants.add(nid); edges.filter((e) => e.from === nid).forEach((e) => findDesc(e.to)); };
@@ -418,36 +665,417 @@ export default function ChallengeMap() {
                 </span>
               ) : null
             )}
-            <button onClick={exportPng}
-              style={{ fontSize: 10, padding: "4px 10px", background: "none", border: "1px solid #DEE2E6", borderRadius: 3, color: "#868E96", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace" }}>
-              Export PNG
-            </button>
+            {tutorialStep === -1 && (
+              <button onClick={exportPng}
+                style={{ fontSize: 10, padding: "4px 10px", background: "none", border: "1px solid #DEE2E6", borderRadius: 3, color: "#868E96", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace" }}>
+                Export PNG
+              </button>
+            )}
+            {tutorialStep === -1 && (
+              <button
+                title="Replay tutorial"
+                onClick={() => {
+                  localStorage.removeItem("deeproot-tutorial-completed");
+                  window.location.hash = "";
+                  window.location.reload();
+                }}
+                style={{ fontSize: 13, padding: "4px 8px", background: "none", border: "1px solid #DEE2E6", borderRadius: 3, color: "#ADB5BD", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace" }}>
+                ?
+              </button>
+            )}
           </div>
         </div>
 
         {/* Tree layer */}
         <div ref={treeRef} style={{ transform: `translate(${pan?.x ?? 0}px, ${pan?.y ?? 0}px)`, position: "absolute", top: 50, left: 0 }}>
-          <svg style={{ position: "absolute", top: 0, left: 0, width: canvasW, height: canvasH, pointerEvents: "none" }}>
+          <svg style={{ position: "absolute", top: -500, left: -1000, width: 5000, height: 3000, pointerEvents: "none" }}>
+            <g transform="translate(1000, 500)">
             {edges.map((edge) => (
               <ConnectionLine key={`${edge.from}-${edge.to}`} from={edge.from} to={edge.to} positions={positions} />
             ))}
+            {/* Tutorial dashed connection lines */}
+            {tutorialStep === 3 && tutorialPlaceholderPositions && !tutorialRevealed.has("constraint") && (() => {
+              const goalPos = positions["tutorial-goal"];
+              if (!goalPos) return null;
+              const cp = tutorialPlaceholderPositions.constraint;
+              const x1 = goalPos.x + NODE_W / 2;
+              const y1 = goalPos.y + NODE_H;
+              const x2 = cp.x + NODE_W / 2;
+              const y2 = cp.y;
+              const midY = (y1 + y2) / 2;
+              return (
+                <path
+                  d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
+                  stroke="#CED4DA"
+                  strokeWidth="1.5"
+                  strokeDasharray="6 4"
+                  fill="none"
+                />
+              );
+            })()}
+            {tutorialStep === 4 && tutorialPlaceholderPositions && !tutorialRevealed.has("consideration") && (() => {
+              const goalPos = positions["tutorial-goal"];
+              if (!goalPos) return null;
+              const cp = tutorialPlaceholderPositions.consideration;
+              const x1 = goalPos.x + NODE_W / 2;
+              const y1 = goalPos.y + NODE_H;
+              const x2 = cp.x + NODE_W / 2;
+              const y2 = cp.y;
+              const midY = (y1 + y2) / 2;
+              return (
+                <path
+                  d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
+                  stroke="#CED4DA"
+                  strokeWidth="1.5"
+                  strokeDasharray="6 4"
+                  fill="none"
+                />
+              );
+            })()}
+            {tutorialStep === 5 && tutorialPlaceholderPositions && !tutorialRevealed.has("action") && (() => {
+              const goalPos = positions["tutorial-goal"];
+              if (!goalPos) return null;
+              const ap = tutorialPlaceholderPositions.action;
+              const x1 = goalPos.x + NODE_W / 2;
+              const y1 = goalPos.y + NODE_H;
+              const x2 = ap.x + NODE_W / 2;
+              const y2 = ap.y;
+              const midY = (y1 + y2) / 2;
+              return (
+                <path
+                  d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
+                  stroke="#CED4DA"
+                  strokeWidth="1.5"
+                  strokeDasharray="6 4"
+                  fill="none"
+                />
+              );
+            })()}
+            </g>
           </svg>
           {nodes.map((node) =>
             positions[node.id] ? (
-              <NodeCard key={node.id} node={node} pos={positions[node.id]} onSelect={setSelectedId} isSelected={selectedId === node.id} onAddChild={addChild} childCount={getChildCount(node.id)} />
+              <NodeCard key={node.id} node={node} pos={positions[node.id]} onSelect={setSelectedId} isSelected={selectedId === node.id} onAddChild={addChild} childCount={getChildCount(node.id)} hideDep={tutorialStep >= 1 && tutorialStep <= 6} />
             ) : null
+          )}
+          {/* Tutorial placeholder nodes */}
+          {tutorialStep === 3 && tutorialPlaceholderPositions && !tutorialRevealed.has("constraint") && (
+            <PlaceholderNode
+              pos={tutorialPlaceholderPositions.constraint}
+              color={NODE_TYPES.constraint.color}
+              onClick={() => {
+                setNodes((prev) => [...prev, { id: "tutorial-constraint", label: "No cold weather gear", type: "constraint", status: "open", notes: "" }]);
+                setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-constraint" }]);
+                setTutorialRevealed((prev) => new Set(prev).add("constraint"));
+              }}
+            />
+          )}
+          {tutorialStep === 4 && tutorialPlaceholderPositions && !tutorialRevealed.has("consideration") && (
+            <PlaceholderNode
+              pos={tutorialPlaceholderPositions.consideration}
+              color={NODE_TYPES.consideration.color}
+              onClick={() => {
+                setNodes((prev) => [...prev, { id: "tutorial-consideration", label: "Best season: July-Sept", type: "consideration", status: "open", notes: "" }]);
+                setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-consideration" }]);
+                setTutorialRevealed((prev) => new Set(prev).add("consideration"));
+              }}
+            />
+          )}
+          {tutorialStep === 5 && tutorialPlaceholderPositions && !tutorialRevealed.has("action") && (
+            <PlaceholderNode
+              pos={tutorialPlaceholderPositions.action}
+              color={NODE_TYPES.action.color}
+              onClick={() => {
+                setNodes((prev) => [...prev, { id: "tutorial-action-1", label: "Book a guide service", type: "action", status: "open", notes: "" }]);
+                setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-action-1" }]);
+                setTutorialRevealed((prev) => new Set(prev).add("action"));
+                tutorialTimers.current.push(setTimeout(() => {
+                  setNodes((prev) => [...prev, { id: "tutorial-action-2", label: "Rent gear from REI", type: "action", status: "open", notes: "" }]);
+                  setEdges((prev) => [...prev, { from: "tutorial-constraint", to: "tutorial-action-2" }]);
+                }, 400));
+                tutorialTimers.current.push(setTimeout(() => {
+                  setNodes((prev) => [...prev, { id: "tutorial-action-3", label: "Plan for August trip", type: "action", status: "open", notes: "" }]);
+                  setEdges((prev) => [...prev, { from: "tutorial-consideration", to: "tutorial-action-3" }]);
+                  tutorialTimers.current.push(setTimeout(() => setTutorialStep(6), 600));
+                }, 800));
+              }}
+            />
           )}
         </div>
 
-        {nodes.length === 1 && edges.length === 0 && (
+        {tutorialStep === -1 && nodes.length === 0 && (
+          <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", textAlign: "center", zIndex: 20, maxWidth: 400 }}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#868E96" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12 }}><path d="m8 3 4 8 5-5 5 15H2L8 3z"/><path d="M4.14 15.08c2.62-1.57 5.24-1.43 7.86.42 2.74 1.94 5.49 2 8.23.19"/></svg>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: "#212529", marginBottom: 8 }}>Your turn.</h2>
+            <p style={{ fontSize: 14, color: "#868E96", marginBottom: 24, lineHeight: 1.5 }}>Pick something you actually want to achieve and break it down into constraints, considerations, and actions.</p>
+            <button
+              onClick={() => {
+                const newId = generateId();
+                newNodeId.current = newId;
+                setNodes([{ id: newId, label: "My goal", type: "goal", status: "open", notes: "" }]);
+                setSelectedId(newId);
+                setSidebarTab("edit");
+                if (!enableHashSaveRef.current) setEnableHashSave(true);
+              }}
+              style={{ fontSize: 14, padding: "12px 28px", background: NODE_TYPES.goal.color, color: "#FFFFFF", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}
+            >
+              Create your first goal
+            </button>
+          </div>
+        )}
+        {tutorialStep === -1 && nodes.length === 1 && edges.length === 0 && (
           <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", fontSize: 11, color: "#ADB5BD", textAlign: "center", zIndex: 20 }}>
             Click "+ dep" on a node to start building your dependency tree
           </div>
         )}
+        {tutorialStep === -1 && nodes.length > 0 && (
+          <div style={{ position: "absolute", bottom: 8, right: 16, fontSize: 10, color: "#868E96", zIndex: 20 }}>
+            Progress saved in URL — bookmark or share anytime
+          </div>
+        )}
+
+        {tutorialStep === 1 && (
+          <WelcomeOverlay
+            onStart={() => {
+              const goalNode: MapNode = {
+                id: "tutorial-goal",
+                label: "Climb Mount Rainier",
+                type: "goal",
+                status: "open",
+                notes: "",
+              };
+              setNodes([goalNode]);
+              setTutorialStep(2);
+            }}
+            onSkip={() => {
+              localStorage.setItem("deeproot-tutorial-completed", "true");
+              setEnableHashSave(true);
+              setTutorialStep(-1);
+            }}
+          />
+        )}
+
+        {/* Tutorial Stage 2: The Goal */}
+        {tutorialStep === 2 && (
+          <TutorialTooltip
+            targetNodeId="tutorial-goal"
+            positions={positions}
+            panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
+            color={NODE_TYPES.goal.color}
+            canvasRef={canvasRef}
+          >
+            <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>This is your goal.</h4>
+            <p style={{ margin: "0 0 14px 0", fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
+              The thing you want to achieve. Everything else on this map exists to make it happen.
+            </p>
+            <button
+              onClick={() => setTutorialStep(3)}
+              style={{
+                fontSize: 13, fontWeight: 600, padding: "8px 18px",
+                background: NODE_TYPES.goal.color, color: "#fff",
+                border: "none", borderRadius: 6, cursor: "pointer",
+              }}
+            >
+              {"Continue \u2192"}
+            </button>
+          </TutorialTooltip>
+        )}
+
+        {/* Tutorial Stage 3: The Constraint — tooltips only (SVG + placeholders are in tree layer) */}
+        {tutorialStep === 3 && tutorialPlaceholderPositions && (
+          <>
+            {!tutorialRevealed.has("constraint") && (
+              <TutorialTooltip
+                targetNodeId="tutorial-goal"
+                positions={positions}
+                panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
+                color={NODE_TYPES.constraint.color}
+                canvasRef={canvasRef}
+              >
+                <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>What's standing in your way?</h4>
+                <p style={{ margin: 0, fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
+                  Click the dashed box below to reveal a constraint.
+                </p>
+              </TutorialTooltip>
+            )}
+            {tutorialRevealed.has("constraint") && (
+              <TutorialTooltip
+                targetNodeId="tutorial-constraint"
+                positions={positions}
+                panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
+                color={NODE_TYPES.constraint.color}
+                canvasRef={canvasRef}
+              >
+                <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>{"That\u2019s a constraint."}</h4>
+                <p style={{ margin: "0 0 14px 0", fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
+                  It blocks your goal until you deal with it.
+                </p>
+                <button
+                  onClick={() => setTutorialStep(4)}
+                  style={{
+                    fontSize: 13, fontWeight: 600, padding: "8px 18px",
+                    background: "#2F9E44", color: "#fff",
+                    border: "none", borderRadius: 6, cursor: "pointer",
+                  }}
+                >
+                  {"Continue \u2192"}
+                </button>
+              </TutorialTooltip>
+            )}
+          </>
+        )}
+
+        {/* Tutorial Stage 4: The Consideration — tooltips only (SVG + placeholders are in tree layer) */}
+        {tutorialStep === 4 && tutorialPlaceholderPositions && (
+          <>
+            {!tutorialRevealed.has("consideration") && (
+              <TutorialTooltip
+                targetNodeId="tutorial-goal"
+                positions={positions}
+                panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
+                color={NODE_TYPES.consideration.color}
+                canvasRef={canvasRef}
+              >
+                <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>What do you need to keep in mind?</h4>
+                <p style={{ margin: 0, fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
+                  Click the dashed box below to reveal a consideration.
+                </p>
+              </TutorialTooltip>
+            )}
+            {tutorialRevealed.has("consideration") && (
+              <TutorialTooltip
+                targetNodeId="tutorial-consideration"
+                positions={positions}
+                panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
+                color={NODE_TYPES.consideration.color}
+                canvasRef={canvasRef}
+              >
+                <p style={{ margin: "0 0 14px 0", fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
+                  {"Constraints block. Considerations inform. Now let\u2019s figure out what to actually do."}
+                </p>
+                <button
+                  onClick={() => setTutorialStep(5)}
+                  style={{
+                    fontSize: 13, fontWeight: 600, padding: "8px 18px",
+                    background: "#7048E8", color: "#fff",
+                    border: "none", borderRadius: 6, cursor: "pointer",
+                  }}
+                >
+                  {"Continue \u2192"}
+                </button>
+              </TutorialTooltip>
+            )}
+          </>
+        )}
+
+        {/* Tutorial Stage 5: The Actions — tooltips only (SVG + placeholders are in tree layer) */}
+        {tutorialStep === 5 && tutorialPlaceholderPositions && (
+          <>
+            {!tutorialRevealed.has("action") && (
+              <TutorialTooltip
+                targetNodeId="tutorial-goal"
+                positions={positions}
+                panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
+                color={NODE_TYPES.action.color}
+                canvasRef={canvasRef}
+              >
+                <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>What will you actually do?</h4>
+                <p style={{ margin: 0, fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
+                  Actions are concrete steps. Click the dashed box to reveal them.
+                </p>
+              </TutorialTooltip>
+            )}
+            {tutorialRevealed.has("action") && (
+              <TutorialTooltip
+                targetNodeId="tutorial-goal"
+                positions={positions}
+                panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
+                color={NODE_TYPES.action.color}
+                canvasRef={canvasRef}
+              >
+                <p style={{ margin: 0, fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
+                  Watch the map come together...
+                </p>
+              </TutorialTooltip>
+            )}
+          </>
+        )}
+
+        {/* Tutorial Stage 6: Completion */}
+        {tutorialStep === 6 && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: 60,
+              right: 316,
+              maxWidth: 340,
+              background: "#FFFFFF",
+              borderRadius: 12,
+              padding: "24px",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+              zIndex: 50,
+              fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+            }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#868E96" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 8 }}><path d="M5.8 11.3 2 22l10.7-3.79"/><path d="M4 3h.01"/><path d="M22 8h.01"/><path d="M15 2h.01"/><path d="M22 20h.01"/><path d="m22 2-2.24.75a2.9 2.9 0 0 0-1.96 3.12c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10"/><path d="m22 13-.82-.33c-.86-.34-1.82.2-1.98 1.11c-.11.7-.72 1.22-1.43 1.22H17"/><path d="m11 2 .33.82c.34.86-.2 1.82-1.11 1.98C9.52 4.9 9 5.52 9 6.23V7"/><path d="M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z"/></svg>
+            <h4 style={{ margin: "0 0 8px 0", fontSize: 16, color: "#212529", fontWeight: 700 }}>
+              You just decomposed a goal.
+            </h4>
+            <p style={{ margin: "0 0 20px 0", fontSize: 13, color: "#495057", lineHeight: 1.6 }}>
+              {"Constraints, considerations, and actions \u2014 that\u2019s the whole system. Now try it with something you actually care about."}
+            </p>
+            <button
+              onClick={() => {
+                localStorage.setItem("deeproot-tutorial-completed", "true");
+                setNodes([]);
+                setEdges([]);
+                setTutorialRevealed(new Set());
+                setEnableHashSave(true);
+                setSelectedId(null);
+                setTutorialStep(-1);
+              }}
+              style={{
+                display: "block",
+                width: "100%",
+                fontSize: 13,
+                fontWeight: 600,
+                padding: "10px 20px",
+                background: NODE_TYPES.goal.color,
+                color: "#fff",
+                border: "none",
+                borderRadius: 6,
+                cursor: "pointer",
+                marginBottom: 8,
+              }}
+            >
+              {"Start my own map \u2192"}
+            </button>
+            <button
+              onClick={() => {
+                localStorage.setItem("deeproot-tutorial-completed", "true");
+                setTutorialStep(-1);
+              }}
+              style={{
+                display: "block",
+                width: "100%",
+                fontSize: 12,
+                padding: "8px 20px",
+                background: "none",
+                border: "none",
+                color: "#868E96",
+                cursor: "pointer",
+                textDecoration: "underline",
+              }}
+            >
+              Keep exploring this one
+            </button>
+          </div>
+        )}
+
       </div>
 
       {/* Sidebar */}
-      <div style={{ width: 300, borderLeft: "1px solid #E9ECEF", background: "#FFFFFF", display: "flex", flexDirection: "column", overflowY: "auto", flexShrink: 0 }}>
+      {tutorialStep === -1 && <div style={{ width: 300, borderLeft: "1px solid #E9ECEF", background: "#FFFFFF", display: "flex", flexDirection: "column", overflowY: "auto", flexShrink: 0 }}>
         <div style={{ display: "flex", borderBottom: "1px solid #E9ECEF" }}>
           {([{ id: "edit" as const, label: "Node" }, { id: "actions" as const, label: "Actions" }]).map((tab) => (
             <button key={tab.id} onClick={() => setSidebarTab(tab.id)}
@@ -462,7 +1090,7 @@ export default function ChallengeMap() {
 
         {sidebarTab === "edit" ? (
           selectedNode ? (
-            <EditPanel node={selectedNode} onUpdate={updateNode} onDelete={deleteNode} onClose={() => setSelectedId(null)} autoFocusLabel={selectedNode.id === newNodeId.current} />
+            <EditPanel node={selectedNode} onUpdate={updateNode} onDelete={deleteNode} onAddChild={addChild} onClose={() => setSelectedId(null)} autoFocusLabel={selectedNode.id === newNodeId.current} />
           ) : (
             <div style={{ padding: 16, fontSize: 11, color: "#ADB5BD", textAlign: "center", marginTop: 40 }}>Select a node to edit</div>
           )
@@ -487,7 +1115,7 @@ export default function ChallengeMap() {
             ))}
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 }
