@@ -557,14 +557,17 @@ export default function ChallengeMap() {
     if (!goalPos) return null;
     const row1Y = goalPos.y + NODE_H + V_GAP;
     const row2Y = goalPos.y + 2 * (NODE_H + V_GAP);
-    // Position children below the goal, spread evenly
-    // Use goal position as the center column, offset left and right
+    // Position children below the goal with all positive x coordinates.
+    // Left column starts at x=40, center and right offset from there.
+    const leftX = 40;
+    const centerX = leftX + NODE_W + H_GAP;
+    const rightX = centerX + NODE_W + H_GAP;
     return {
-      constraint: { x: goalPos.x - NODE_W - H_GAP, y: row1Y },
-      consideration: { x: goalPos.x, y: row1Y },
-      action: { x: goalPos.x + NODE_W + H_GAP, y: row1Y },
-      actionSub1: { x: goalPos.x - NODE_W - H_GAP, y: row2Y },
-      actionSub2: { x: goalPos.x, y: row2Y },
+      constraint: { x: leftX, y: row1Y },
+      consideration: { x: centerX, y: row1Y },
+      action: { x: rightX, y: row1Y },
+      actionSub1: { x: leftX, y: row2Y },
+      actionSub2: { x: centerX, y: row2Y },
     };
   }, [positions]);
 
@@ -574,8 +577,16 @@ export default function ChallengeMap() {
       const rootPos = positions[nodes[0]?.id];
       if (rootPos) {
         const canvasWidth = canvasRef.current.clientWidth;
-        const centerX = (canvasWidth - NODE_W) / 2 - rootPos.x;
-        setPan({ x: centerX, y: 0 });
+        // During tutorial, center the full 3-column layout instead of just the root
+        if (tutorialStep >= 1 && tutorialStep <= 6) {
+          const totalW = 3 * NODE_W + 2 * H_GAP; // width of 3 columns
+          const layoutCenterX = 40 + totalW / 2; // center of the tutorial layout
+          const centerX = canvasWidth / 2 - layoutCenterX;
+          setPan({ x: centerX, y: 20 });
+        } else {
+          const centerX = (canvasWidth - NODE_W) / 2 - rootPos.x;
+          setPan({ x: centerX, y: 0 });
+        }
       } else {
         setPan({ x: 0, y: 0 });
       }
@@ -828,6 +839,24 @@ export default function ChallengeMap() {
           )}
         </div>
 
+        {tutorialStep === -1 && nodes.length === 0 && (
+          <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", textAlign: "center", zIndex: 20 }}>
+            <p style={{ fontSize: 14, color: "#868E96", marginBottom: 16 }}>What's your goal?</p>
+            <button
+              onClick={() => {
+                const newId = generateId();
+                newNodeId.current = newId;
+                setNodes([{ id: newId, label: "My goal", type: "goal", status: "open", notes: "" }]);
+                setSelectedId(newId);
+                setSidebarTab("edit");
+                if (!enableHashSaveRef.current) setEnableHashSave(true);
+              }}
+              style={{ fontSize: 13, padding: "10px 24px", background: NODE_TYPES.goal.color, color: "#FFFFFF", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}
+            >
+              Create your first goal
+            </button>
+          </div>
+        )}
         {tutorialStep === -1 && nodes.length === 1 && edges.length === 0 && (
           <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", fontSize: 11, color: "#ADB5BD", textAlign: "center", zIndex: 20 }}>
             Click "+ dep" on a node to start building your dependency tree
