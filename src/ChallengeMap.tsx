@@ -229,7 +229,7 @@ function NodeCard({
 }
 
 
-function EditPanel({ node, onUpdate, onDelete, onClose, autoFocusLabel }: { node: MapNode; onUpdate: (n: MapNode) => void; onDelete: (id: string) => void; onClose: () => void; autoFocusLabel?: boolean }) {
+function EditPanel({ node, onUpdate, onDelete, onAddChild, onClose, autoFocusLabel }: { node: MapNode; onUpdate: (n: MapNode) => void; onDelete: (id: string) => void; onAddChild: (id: string) => void; onClose: () => void; autoFocusLabel?: boolean }) {
   const labelRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -275,10 +275,16 @@ function EditPanel({ node, onUpdate, onDelete, onClose, autoFocusLabel }: { node
         placeholder="Add notes, reflections, or context..." rows={4}
         style={{ width: "100%", fontSize: 12, padding: "8px", border: "1px solid #DEE2E6", borderRadius: 4, outline: "none", marginBottom: 12, resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
 
-      <button onClick={() => onDelete(node.id)}
-        style={{ fontSize: 10, padding: "6px 12px", background: "none", border: "1px solid #E03131", borderRadius: 4, color: "#E03131", cursor: "pointer", fontFamily: "inherit" }}>
-        Delete node
-      </button>
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <button onClick={() => onAddChild(node.id)}
+          style={{ fontSize: 10, padding: "6px 12px", background: "#F8F9FA", border: "1px solid #ADB5BD", borderRadius: 4, color: "#495057", cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>
+          + Dep
+        </button>
+        <button onClick={() => onDelete(node.id)}
+          style={{ fontSize: 10, padding: "6px 12px", background: "none", border: "1px solid #E03131", borderRadius: 4, color: "#E03131", cursor: "pointer", fontFamily: "inherit" }}>
+          Delete node
+        </button>
+      </div>
     </div>
   );
 }
@@ -311,14 +317,16 @@ function WelcomeOverlay({ onStart, onSkip }: { onStart: () => void; onSkip: () =
           fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
         }}
       >
-        <div style={{ fontSize: 48, marginBottom: 16 }}>{"\u26F0\uFE0F"}</div>
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#868E96" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 16 }}><path d="m8 3 4 8 5-5 5 15H2L8 3z"/><path d="M4.14 15.08c2.62-1.57 5.24-1.43 7.86.42 2.74 1.94 5.49 2 8.23.19"/></svg>
         <h1
           style={{
             fontSize: 22,
-            fontWeight: 700,
+            fontWeight: 600,
             color: "#212529",
             margin: "0 0 12px 0",
-            lineHeight: 1.3,
+            lineHeight: 1.4,
+            fontFamily: "inherit",
+            letterSpacing: "-0.01em",
           }}
         >
           Every big goal is a system of smaller ones.
@@ -402,7 +410,7 @@ function TutorialTooltip({
         top,
         maxWidth: 280,
         background: "#FFFFFF",
-        borderLeft: `4px solid ${color}`,
+        border: "1px solid #DEE2E6",
         borderRadius: 10,
         padding: "16px",
         boxShadow: "0 4px 16px rgba(0,0,0,0.10)",
@@ -415,54 +423,6 @@ function TutorialTooltip({
   );
 }
 
-function TutorialProgress({ currentStep }: { currentStep: number }) {
-  const totalSteps = 6;
-  return (
-    <div
-      style={{
-        position: "absolute",
-        bottom: 24,
-        left: "50%",
-        transform: "translateX(-50%)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 8,
-        zIndex: 50,
-      }}
-    >
-      <div style={{ display: "flex", gap: 6 }}>
-        {Array.from({ length: totalSteps }, (_, i) => {
-          const step = i + 1;
-          let bg: string;
-          if (step < currentStep) bg = "#2F9E44";
-          else if (step === currentStep) bg = NODE_TYPES.goal.color;
-          else bg = "#DEE2E6";
-          return (
-            <div
-              key={step}
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: bg,
-              }}
-            />
-          );
-        })}
-      </div>
-      <span
-        style={{
-          fontSize: 10,
-          color: "#868E96",
-          fontFamily: "'JetBrains Mono', monospace",
-        }}
-      >
-        Step {currentStep} of {totalSteps}
-      </span>
-    </div>
-  );
-}
 
 function PlaceholderNode({
   pos,
@@ -844,8 +804,10 @@ export default function ChallengeMap() {
         </div>
 
         {tutorialStep === -1 && nodes.length === 0 && (
-          <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", textAlign: "center", zIndex: 20 }}>
-            <p style={{ fontSize: 14, color: "#868E96", marginBottom: 16 }}>What's your goal?</p>
+          <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", textAlign: "center", zIndex: 20, maxWidth: 400 }}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#868E96" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12 }}><path d="m8 3 4 8 5-5 5 15H2L8 3z"/><path d="M4.14 15.08c2.62-1.57 5.24-1.43 7.86.42 2.74 1.94 5.49 2 8.23.19"/></svg>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: "#212529", marginBottom: 8 }}>Your turn.</h2>
+            <p style={{ fontSize: 14, color: "#868E96", marginBottom: 24, lineHeight: 1.5 }}>Pick something you actually want to achieve and break it down into constraints, considerations, and actions.</p>
             <button
               onClick={() => {
                 const newId = generateId();
@@ -855,7 +817,7 @@ export default function ChallengeMap() {
                 setSidebarTab("edit");
                 if (!enableHashSaveRef.current) setEnableHashSave(true);
               }}
-              style={{ fontSize: 13, padding: "10px 24px", background: NODE_TYPES.goal.color, color: "#FFFFFF", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}
+              style={{ fontSize: 14, padding: "12px 28px", background: NODE_TYPES.goal.color, color: "#FFFFFF", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}
             >
               Create your first goal
             </button>
@@ -864,6 +826,11 @@ export default function ChallengeMap() {
         {tutorialStep === -1 && nodes.length === 1 && edges.length === 0 && (
           <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", fontSize: 11, color: "#ADB5BD", textAlign: "center", zIndex: 20 }}>
             Click "+ dep" on a node to start building your dependency tree
+          </div>
+        )}
+        {tutorialStep === -1 && nodes.length > 0 && (
+          <div style={{ position: "absolute", bottom: 8, right: 16, fontSize: 10, color: "#868E96", zIndex: 20 }}>
+            Progress saved in URL — bookmark or share anytime
           </div>
         )}
 
@@ -1050,7 +1017,7 @@ export default function ChallengeMap() {
               fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
             }}
           >
-            <div style={{ fontSize: 32, marginBottom: 8 }}>{"\uD83C\uDF89"}</div>
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#868E96" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 8 }}><path d="M5.8 11.3 2 22l10.7-3.79"/><path d="M4 3h.01"/><path d="M22 8h.01"/><path d="M15 2h.01"/><path d="M22 20h.01"/><path d="m22 2-2.24.75a2.9 2.9 0 0 0-1.96 3.12c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10"/><path d="m22 13-.82-.33c-.86-.34-1.82.2-1.98 1.11c-.11.7-.72 1.22-1.43 1.22H17"/><path d="m11 2 .33.82c.34.86-.2 1.82-1.11 1.98C9.52 4.9 9 5.52 9 6.23V7"/><path d="M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z"/></svg>
             <h4 style={{ margin: "0 0 8px 0", fontSize: 16, color: "#212529", fontWeight: 700 }}>
               You just decomposed a goal.
             </h4>
@@ -1105,9 +1072,6 @@ export default function ChallengeMap() {
           </div>
         )}
 
-        {tutorialStep >= 2 && tutorialStep <= 6 && (
-          <TutorialProgress currentStep={tutorialStep} />
-        )}
       </div>
 
       {/* Sidebar */}
@@ -1126,7 +1090,7 @@ export default function ChallengeMap() {
 
         {sidebarTab === "edit" ? (
           selectedNode ? (
-            <EditPanel node={selectedNode} onUpdate={updateNode} onDelete={deleteNode} onClose={() => setSelectedId(null)} autoFocusLabel={selectedNode.id === newNodeId.current} />
+            <EditPanel node={selectedNode} onUpdate={updateNode} onDelete={deleteNode} onAddChild={addChild} onClose={() => setSelectedId(null)} autoFocusLabel={selectedNode.id === newNodeId.current} />
           ) : (
             <div style={{ padding: 16, fontSize: 11, color: "#ADB5BD", textAlign: "center", marginTop: 40 }}>Select a node to edit</div>
           )
