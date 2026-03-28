@@ -1,9 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import html2canvas from "html2canvas";
 
-const DEFAULT_NODES: MapNode[] = [
-  { id: "root", label: "Regular, progressing airsports sessions", type: "goal", status: "open", notes: "" },
-];
+const DEFAULT_NODES: MapNode[] = [];
 
 function saveToHash(nodes: MapNode[], edges: MapEdge[]) {
   try {
@@ -281,16 +279,253 @@ function EditPanel({ node, onUpdate, onDelete, onClose, autoFocusLabel }: { node
   );
 }
 
+/* ── Tutorial Components ─────────────────────────────────────────────── */
+
+function WelcomeOverlay({ onStart, onSkip }: { onStart: () => void; onSkip: () => void }) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        background: "rgba(248,249,250,0.85)",
+        backdropFilter: "blur(4px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 100,
+      }}
+    >
+      <div
+        style={{
+          background: "#FFFFFF",
+          borderRadius: 12,
+          padding: "40px 36px",
+          maxWidth: 480,
+          width: "90%",
+          textAlign: "center",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        }}
+      >
+        <div style={{ fontSize: 48, marginBottom: 16 }}>{"\u26F0\uFE0F"}</div>
+        <h1
+          style={{
+            fontSize: 22,
+            fontWeight: 700,
+            color: "#212529",
+            margin: "0 0 12px 0",
+            lineHeight: 1.3,
+          }}
+        >
+          Every big goal is a system of smaller ones.
+        </h1>
+        <p
+          style={{
+            fontSize: 14,
+            color: "#495057",
+            lineHeight: 1.6,
+            margin: "0 0 28px 0",
+          }}
+        >
+          Deeproot helps you break down ambitious goals into constraints,
+          considerations, and concrete actions. Let's walk through a quick
+          example together.
+        </p>
+        <button
+          onClick={onStart}
+          style={{
+            fontSize: 14,
+            fontWeight: 600,
+            padding: "12px 28px",
+            background: NODE_TYPES.goal.color,
+            color: "#FFFFFF",
+            border: "none",
+            borderRadius: 8,
+            cursor: "pointer",
+            marginBottom: 12,
+            fontFamily: "inherit",
+          }}
+        >
+          {"Start the climb \u2192"}
+        </button>
+        <div>
+          <button
+            onClick={onSkip}
+            style={{
+              fontSize: 12,
+              color: "#868E96",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              textDecoration: "underline",
+              fontFamily: "inherit",
+            }}
+          >
+            Skip tutorial
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TutorialTooltip({
+  targetNodeId,
+  positions,
+  panOffset,
+  color,
+  children,
+  canvasRef,
+}: {
+  targetNodeId: string;
+  positions: Record<string, Position>;
+  panOffset: { x: number; y: number };
+  color: string;
+  children: React.ReactNode;
+  canvasRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const pos = positions[targetNodeId];
+  if (!pos) return null;
+
+  const left = pos.x + NODE_W + 16 + panOffset.x;
+  const top = pos.y + panOffset.y + 50; // 50px header offset
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left,
+        top,
+        maxWidth: 280,
+        background: "#FFFFFF",
+        borderLeft: `4px solid ${color}`,
+        borderRadius: 10,
+        padding: "16px",
+        boxShadow: "0 4px 16px rgba(0,0,0,0.10)",
+        zIndex: 50,
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function TutorialProgress({ currentStep }: { currentStep: number }) {
+  const totalSteps = 6;
+  return (
+    <div
+      style={{
+        position: "absolute",
+        bottom: 24,
+        left: "50%",
+        transform: "translateX(-50%)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 8,
+        zIndex: 50,
+      }}
+    >
+      <div style={{ display: "flex", gap: 6 }}>
+        {Array.from({ length: totalSteps }, (_, i) => {
+          const step = i + 1;
+          let bg: string;
+          if (step < currentStep) bg = "#2F9E44";
+          else if (step === currentStep) bg = NODE_TYPES.goal.color;
+          else bg = "#DEE2E6";
+          return (
+            <div
+              key={step}
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: bg,
+              }}
+            />
+          );
+        })}
+      </div>
+      <span
+        style={{
+          fontSize: 10,
+          color: "#868E96",
+          fontFamily: "'JetBrains Mono', monospace",
+        }}
+      >
+        Step {currentStep} of {totalSteps}
+      </span>
+    </div>
+  );
+}
+
+function PlaceholderNode({
+  pos,
+  color,
+  onClick,
+}: {
+  pos: Position;
+  color: string;
+  onClick: () => void;
+}) {
+  return (
+    <div
+      tabIndex={0}
+      role="button"
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      style={{
+        position: "absolute",
+        left: pos.x,
+        top: pos.y,
+        width: NODE_W,
+        minHeight: NODE_H - 20,
+        border: `2px dashed ${color}`,
+        borderRadius: 6,
+        background: "rgba(255,255,255,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        fontSize: 12,
+        color: color,
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        fontWeight: 500,
+        boxSizing: "border-box",
+        userSelect: "none",
+      }}
+    >
+      Click to reveal
+    </div>
+  );
+}
+
 export default function ChallengeMap() {
   const initial = useMemo(() => loadFromHash(), []);
-  const [nodes, setNodes] = useState<MapNode[]>(initial?.nodes ?? DEFAULT_NODES);
+
+  const [tutorialStep, setTutorialStep] = useState<number>(() => {
+    if (initial !== null) return -1;
+    if (typeof window !== "undefined" && localStorage.getItem("deeproot-tutorial-completed")) return -1;
+    return 1;
+  });
+  const [enableHashSave, setEnableHashSave] = useState<boolean>(initial !== null);
+
+  const [nodes, setNodes] = useState<MapNode[]>(initial?.nodes ?? []);
   const [edges, setEdges] = useState<MapEdge[]>(initial?.edges ?? []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sidebarTab, setSidebarTab] = useState<"edit" | "actions">("edit");
 
   useEffect(() => {
-    saveToHash(nodes, edges);
-  }, [nodes, edges]);
+    if (enableHashSave) {
+      saveToHash(nodes, edges);
+    }
+  }, [nodes, edges, enableHashSave]);
   const [pan, setPan] = useState<{ x: number; y: number } | null>(null);
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
@@ -439,10 +674,35 @@ export default function ChallengeMap() {
           )}
         </div>
 
-        {nodes.length === 1 && edges.length === 0 && (
+        {tutorialStep === -1 && nodes.length === 1 && edges.length === 0 && (
           <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", fontSize: 11, color: "#ADB5BD", textAlign: "center", zIndex: 20 }}>
             Click "+ dep" on a node to start building your dependency tree
           </div>
+        )}
+
+        {tutorialStep === 1 && (
+          <WelcomeOverlay
+            onStart={() => {
+              const goalNode: MapNode = {
+                id: "tutorial-goal",
+                label: "Climb Mount Rainier",
+                type: "goal",
+                status: "open",
+                notes: "",
+              };
+              setNodes([goalNode]);
+              setTutorialStep(2);
+            }}
+            onSkip={() => {
+              localStorage.setItem("deeproot-tutorial-completed", "true");
+              setEnableHashSave(true);
+              setTutorialStep(-1);
+            }}
+          />
+        )}
+
+        {tutorialStep >= 2 && tutorialStep <= 6 && (
+          <TutorialProgress currentStep={tutorialStep} />
         )}
       </div>
 
