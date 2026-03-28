@@ -385,16 +385,12 @@ function TutorialTooltip({
   targetNodeId,
   positions,
   panOffset,
-  color,
   children,
-  canvasRef,
 }: {
   targetNodeId: string;
   positions: Record<string, Position>;
   panOffset: { x: number; y: number };
-  color: string;
   children: React.ReactNode;
-  canvasRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const pos = positions[targetNodeId];
   if (!pos) return null;
@@ -500,6 +496,7 @@ export default function ChallengeMap() {
   const [edges, setEdges] = useState<MapEdge[]>(initial?.edges ?? []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sidebarTab, setSidebarTab] = useState<"edit" | "actions">("edit");
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   useEffect(() => {
     if (enableHashSave) {
@@ -567,6 +564,19 @@ export default function ChallengeMap() {
 
   const handleMouseUp = useCallback(() => setIsPanning(false), []);
 
+  const shortcutsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showShortcuts) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (shortcutsRef.current && !shortcutsRef.current.contains(e.target as Node)) {
+        setShowShortcuts(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showShortcuts]);
+
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.target === canvasRef.current || (e.target as HTMLElement).tagName === "svg") {
       setSelectedId(null);
@@ -606,15 +616,61 @@ export default function ChallengeMap() {
   const deleteNode = useCallback((id: string) => {
     if (!enableHashSaveRef.current) setEnableHashSave(true);
     if (id === "root" && nodes.length === 1) return;
+    const parentEdge = edges.find((e) => e.to === id);
     const descendants = new Set<string>();
     const findDesc = (nid: string) => { descendants.add(nid); edges.filter((e) => e.from === nid).forEach((e) => findDesc(e.to)); };
     findDesc(id);
     setNodes((prev) => prev.filter((n) => !descendants.has(n.id)));
     setEdges((prev) => prev.filter((e) => !descendants.has(e.from) && !descendants.has(e.to)));
-    setSelectedId(null);
+    setSelectedId(parentEdge ? parentEdge.from : null);
   }, [edges, nodes]);
 
   const getChildCount = useCallback((id: string) => edges.filter((e) => e.from === id).length, [edges]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName;
+      const inInput = tag === "INPUT" || tag === "TEXTAREA";
+      if (tutorialStep >= 1 && tutorialStep <= 6) return;
+
+      if (e.key === "Escape") {
+        if (inInput) {
+          (e.target as HTMLElement).blur();
+          return;
+        }
+        setSelectedId(null);
+      }
+      if (inInput) return;
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedId) {
+        e.preventDefault();
+        deleteNode(selectedId);
+      } else if (e.key === "Enter" && selectedId) {
+        e.preventDefault();
+        addChild(selectedId);
+      } else if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key) && selectedId) {
+        e.preventDefault();
+        const parent = edges.find((edge) => edge.to === selectedId);
+        const children = edges.filter((edge) => edge.from === selectedId).map((edge) => edge.to);
+        const siblings = parent
+          ? edges.filter((edge) => edge.from === parent.from).map((edge) => edge.to)
+          : nodes.filter((n) => !edges.some((edge) => edge.to === n.id)).map((n) => n.id);
+        const siblingIdx = siblings.indexOf(selectedId);
+
+        if (e.key === "ArrowUp" && parent) {
+          setSelectedId(parent.from);
+        } else if (e.key === "ArrowDown" && children.length > 0) {
+          setSelectedId(children[0]);
+        } else if (e.key === "ArrowLeft" && siblingIdx > 0) {
+          setSelectedId(siblings[siblingIdx - 1]);
+        } else if (e.key === "ArrowRight" && siblingIdx < siblings.length - 1) {
+          setSelectedId(siblings[siblingIdx + 1]);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedId, deleteNode, addChild, tutorialStep, edges, nodes]);
 
   const statusCounts = nodes.reduce<Record<string, number>>((acc, n) => { acc[n.status] = (acc[n.status] || 0) + 1; return acc; }, {});
   const actionNodes = useMemo(() => nodes.filter((n) => n.type === "action"), [nodes]);
@@ -648,8 +704,35 @@ export default function ChallengeMap() {
     <div style={{ display: "flex", width: "100%", height: "100vh", background: "#F8F9FA", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", overflow: "hidden" }}>
       <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
+      {/* Small screen overlay */}
+      <div style={{
+        display: "none",
+        position: "fixed",
+        inset: 0,
+        background: "#F8F9FA",
+        zIndex: 9999,
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 32,
+        textAlign: "center",
+      }}
+        className="small-screen-overlay"
+      >
+        <div style={{ maxWidth: 360 }}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#868E96" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 16 }}><path d="m8 3 4 8 5-5 5 15H2L8 3z"/><path d="M4.14 15.08c2.62-1.57 5.24-1.43 7.86.42 2.74 1.94 5.49 2 8.23.19"/></svg>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: "#212529", margin: "0 0 12px 0", letterSpacing: "-0.01em" }}>Deeproot needs more room</h1>
+          <p style={{ fontSize: 14, color: "#495057", lineHeight: 1.6, margin: "0 0 20px 0" }}>
+            Deeproot is a visual tool for breaking down ambitious goals into constraints, considerations, and concrete actions. It works best on a laptop or desktop screen.
+          </p>
+          <p style={{ fontSize: 12, color: "#ADB5BD", lineHeight: 1.5, margin: 0 }}>
+            Open this link on a larger screen to get started.
+          </p>
+        </div>
+      </div>
+      <style>{`@media (max-width: 768px) { .small-screen-overlay { display: flex !important; } }`}</style>
+
       <div ref={canvasRef} onMouseDown={handleCanvasMouseDown}
-        style={{ flex: 1, position: "relative", overflow: "hidden", cursor: isPanning ? "grabbing" : "default" }}>
+        style={{ flex: 1, position: "relative", overflow: "hidden", cursor: isPanning ? "grabbing" : "default", backgroundImage: "radial-gradient(circle, #DEE2E6 0.8px, transparent 0.8px)", backgroundSize: "24px 24px" }}>
 
         {/* Header */}
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: "12px 16px", background: "rgba(248,249,250,0.92)", backdropFilter: "blur(8px)", borderBottom: "1px solid #E9ECEF", display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 20 }}>
@@ -664,6 +747,14 @@ export default function ChallengeMap() {
                   {val.icon} {statusCounts[key]} {val.label.toLowerCase()}
                 </span>
               ) : null
+            )}
+            {tutorialStep === -1 && (
+              <button
+                title="New canvas"
+                onClick={() => { window.open(window.location.origin + window.location.pathname, "_blank"); }}
+                style={{ fontSize: 10, padding: "4px 10px", background: "none", border: "1px solid #DEE2E6", borderRadius: 3, color: "#868E96", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace" }}>
+                + New Deeproot
+              </button>
             )}
             {tutorialStep === -1 && (
               <button onClick={exportPng}
@@ -823,14 +914,44 @@ export default function ChallengeMap() {
             </button>
           </div>
         )}
-        {tutorialStep === -1 && nodes.length === 1 && edges.length === 0 && (
-          <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", fontSize: 11, color: "#ADB5BD", textAlign: "center", zIndex: 20 }}>
-            Click "+ dep" on a node to start building your dependency tree
-          </div>
-        )}
-        {tutorialStep === -1 && nodes.length > 0 && (
+{tutorialStep === -1 && nodes.length > 0 && (
           <div style={{ position: "absolute", bottom: 8, right: 16, fontSize: 10, color: "#868E96", zIndex: 20 }}>
             Progress saved in URL — bookmark or share anytime
+          </div>
+        )}
+
+        {tutorialStep === -1 && (
+          <div ref={shortcutsRef} style={{ position: "absolute", bottom: 16, left: 16, zIndex: 30 }}>
+            <button
+              onClick={() => setShowShortcuts((s) => !s)}
+              style={{ fontSize: 11, padding: "6px 10px", background: "#FFFFFF", border: "1px solid #DEE2E6", borderRadius: 6, color: "#868E96", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace", boxShadow: "0 1px 3px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 5 }}
+            >
+              <span style={{ fontSize: 13 }}>⌨</span> Shortcuts
+            </button>
+            {showShortcuts && (
+              <div style={{
+                position: "absolute", bottom: "calc(100% + 8px)", left: 0,
+                background: "#FFFFFF", border: "1px solid #DEE2E6", borderRadius: 8,
+                padding: "12px 16px", boxShadow: "0 4px 16px rgba(0,0,0,0.10)",
+                fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                minWidth: 200,
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#212529", marginBottom: 8, fontFamily: "'JetBrains Mono', monospace", textTransform: "uppercase", letterSpacing: "0.05em" }}>Keyboard Shortcuts</div>
+                {[
+                  ["Esc", "Deselect node"],
+                  ["Delete", "Delete selected node"],
+                  ["Return", "Add dependency"],
+                  ["↑", "Go to parent"],
+                  ["↓", "Go to child"],
+                  ["←  →", "Navigate siblings"],
+                ].map(([key, desc]) => (
+                  <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, padding: "4px 0" }}>
+                    <span style={{ fontSize: 11, color: "#495057" }}>{desc}</span>
+                    <kbd style={{ fontSize: 10, padding: "2px 6px", background: "#F1F3F5", border: "1px solid #DEE2E6", borderRadius: 3, color: "#495057", fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" }}>{key}</kbd>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -861,8 +982,6 @@ export default function ChallengeMap() {
             targetNodeId="tutorial-goal"
             positions={positions}
             panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
-            color={NODE_TYPES.goal.color}
-            canvasRef={canvasRef}
           >
             <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>This is your goal.</h4>
             <p style={{ margin: "0 0 14px 0", fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
@@ -889,8 +1008,6 @@ export default function ChallengeMap() {
                 targetNodeId="tutorial-goal"
                 positions={positions}
                 panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
-                color={NODE_TYPES.constraint.color}
-                canvasRef={canvasRef}
               >
                 <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>What's standing in your way?</h4>
                 <p style={{ margin: 0, fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
@@ -903,8 +1020,6 @@ export default function ChallengeMap() {
                 targetNodeId="tutorial-constraint"
                 positions={positions}
                 panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
-                color={NODE_TYPES.constraint.color}
-                canvasRef={canvasRef}
               >
                 <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>{"That\u2019s a constraint."}</h4>
                 <p style={{ margin: "0 0 14px 0", fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
@@ -933,8 +1048,6 @@ export default function ChallengeMap() {
                 targetNodeId="tutorial-goal"
                 positions={positions}
                 panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
-                color={NODE_TYPES.consideration.color}
-                canvasRef={canvasRef}
               >
                 <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>What do you need to keep in mind?</h4>
                 <p style={{ margin: 0, fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
@@ -947,8 +1060,6 @@ export default function ChallengeMap() {
                 targetNodeId="tutorial-consideration"
                 positions={positions}
                 panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
-                color={NODE_TYPES.consideration.color}
-                canvasRef={canvasRef}
               >
                 <p style={{ margin: "0 0 14px 0", fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
                   {"Constraints block. Considerations inform. Now let\u2019s figure out what to actually do."}
@@ -976,8 +1087,6 @@ export default function ChallengeMap() {
                 targetNodeId="tutorial-goal"
                 positions={positions}
                 panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
-                color={NODE_TYPES.action.color}
-                canvasRef={canvasRef}
               >
                 <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>What will you actually do?</h4>
                 <p style={{ margin: 0, fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
@@ -990,8 +1099,6 @@ export default function ChallengeMap() {
                 targetNodeId="tutorial-goal"
                 positions={positions}
                 panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
-                color={NODE_TYPES.action.color}
-                canvasRef={canvasRef}
               >
                 <p style={{ margin: 0, fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
                   Watch the map come together...
@@ -1103,16 +1210,23 @@ export default function ChallengeMap() {
               All nodes marked as "Action" across your map.
             </p>
             {actionNodes.length === 0 && <p style={{ fontSize: 11, color: "#ADB5BD", fontStyle: "italic" }}>No action nodes yet.</p>}
-            {actionNodes.map((n) => (
+            {[...actionNodes].sort((a, b) => {
+              const aComplete = a.status === "done" || a.status === "clear" ? 1 : 0;
+              const bComplete = b.status === "done" || b.status === "clear" ? 1 : 0;
+              return aComplete - bComplete;
+            }).map((n) => {
+              const isComplete = n.status === "done" || n.status === "clear";
+              return (
               <div key={n.id} onClick={() => { setSelectedId(n.id); setSidebarTab("edit"); }}
-                style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "8px", marginBottom: 4, borderRadius: 4, background: NODE_TYPES.action.bg, border: `1px solid ${selectedId === n.id ? NODE_TYPES.action.border : "transparent"}`, cursor: "pointer", transition: "border-color 0.2s" }}>
+                style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "8px", marginBottom: 4, borderRadius: 4, background: isComplete ? "#F8F9FA" : NODE_TYPES.action.bg, border: `1px solid ${selectedId === n.id ? NODE_TYPES.action.border : "transparent"}`, cursor: "pointer", transition: "border-color 0.2s", opacity: isComplete ? 0.55 : 1 }}>
                 <span style={{ fontSize: 10, color: STATUS[n.status].color, flexShrink: 0, marginTop: 1 }}>{STATUS[n.status].icon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12, color: "#212529", wordBreak: "break-word" }}>{n.label}</div>
+                  <div style={{ fontSize: 12, color: isComplete ? "#868E96" : "#212529", wordBreak: "break-word", textDecoration: isComplete ? "line-through" : "none" }}>{n.label}</div>
                   {n.notes && <div style={{ fontSize: 10, color: "#868E96", marginTop: 2, fontStyle: "italic" }}>{n.notes.length > 60 ? n.notes.substring(0, 60) + "..." : n.notes}</div>}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>}
