@@ -386,7 +386,7 @@ export default function ChallengeMap() {
         backgroundColor: "#FFFFFF",
         width: canvasW,
         height: canvasH,
-        scale: 2,
+        scale: 4,
       });
       const link = document.createElement("a");
       link.download = "deeproot.png";
