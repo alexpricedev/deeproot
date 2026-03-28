@@ -1,8 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import html2canvas from "html2canvas";
 
-const DEFAULT_NODES: MapNode[] = [];
-
 function saveToHash(nodes: MapNode[], edges: MapEdge[]) {
   try {
     const data = JSON.stringify({ nodes, edges });
@@ -152,6 +150,7 @@ function NodeCard({
   isSelected,
   onAddChild,
   childCount,
+  hideDep,
 }: {
   node: MapNode;
   pos: Position;
@@ -159,6 +158,7 @@ function NodeCard({
   isSelected: boolean;
   onAddChild: (id: string) => void;
   childCount: number;
+  hideDep?: boolean;
 }) {
   const typeStyle = NODE_TYPES[node.type];
   const statusStyle = STATUS[node.status];
@@ -211,14 +211,16 @@ function NodeCard({
         {childCount > 0 ? (
           <span style={{ fontSize: 9, color: "#ADB5BD" }}>{childCount} dep{childCount !== 1 ? "s" : ""}</span>
         ) : <span />}
-        <button
-          onClick={(e) => { e.stopPropagation(); onAddChild(node.id); }}
-          style={{ fontSize: 9, padding: "2px 8px", background: "none", border: "1px solid #DEE2E6", borderRadius: 3, color: "#868E96", cursor: "pointer", fontFamily: "inherit" }}
-          onMouseEnter={(e) => { (e.target as HTMLButtonElement).style.borderColor = typeStyle.border; (e.target as HTMLButtonElement).style.color = typeStyle.color; }}
-          onMouseLeave={(e) => { (e.target as HTMLButtonElement).style.borderColor = "#DEE2E6"; (e.target as HTMLButtonElement).style.color = "#868E96"; }}
-        >
-          + dep
-        </button>
+        {!hideDep && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onAddChild(node.id); }}
+            style={{ fontSize: 9, padding: "2px 8px", background: "none", border: "1px solid #DEE2E6", borderRadius: 3, color: "#868E96", cursor: "pointer", fontFamily: "inherit" }}
+            onMouseEnter={(e) => { (e.target as HTMLButtonElement).style.borderColor = typeStyle.border; (e.target as HTMLButtonElement).style.color = typeStyle.color; }}
+            onMouseLeave={(e) => { (e.target as HTMLButtonElement).style.borderColor = "#DEE2E6"; (e.target as HTMLButtonElement).style.color = "#868E96"; }}
+          >
+            + dep
+          </button>
+        )}
       </div>
     </div>
   );
@@ -515,6 +517,8 @@ export default function ChallengeMap() {
     return 1;
   });
   const [enableHashSave, setEnableHashSave] = useState<boolean>(initial !== null);
+  const enableHashSaveRef = useRef(enableHashSave);
+  enableHashSaveRef.current = enableHashSave;
   const [tutorialRevealed, setTutorialRevealed] = useState<Set<string>>(new Set());
 
   // Inject tutorial CSS animations
@@ -608,6 +612,7 @@ export default function ChallengeMap() {
   const newNodeId = useRef<string | null>(null);
 
   const addChild = useCallback((parentId: string) => {
+    if (!enableHashSaveRef.current) setEnableHashSave(true);
     const newId = generateId();
     newNodeId.current = newId;
     setNodes((prev) => [...prev, { id: newId, label: "New dependency", type: "constraint", status: "open", notes: "" }]);
@@ -617,10 +622,12 @@ export default function ChallengeMap() {
   }, []);
 
   const updateNode = useCallback((updated: MapNode) => {
+    if (!enableHashSaveRef.current) setEnableHashSave(true);
     setNodes((prev) => prev.map((n) => (n.id === updated.id ? updated : n)));
   }, []);
 
   const deleteNode = useCallback((id: string) => {
+    if (!enableHashSaveRef.current) setEnableHashSave(true);
     if (id === "root" && nodes.length === 1) return;
     const descendants = new Set<string>();
     const findDesc = (nid: string) => { descendants.add(nid); edges.filter((e) => e.from === nid).forEach((e) => findDesc(e.to)); };
@@ -681,10 +688,24 @@ export default function ChallengeMap() {
                 </span>
               ) : null
             )}
-            <button onClick={exportPng}
-              style={{ fontSize: 10, padding: "4px 10px", background: "none", border: "1px solid #DEE2E6", borderRadius: 3, color: "#868E96", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace" }}>
-              Export PNG
-            </button>
+            {tutorialStep === -1 && (
+              <button onClick={exportPng}
+                style={{ fontSize: 10, padding: "4px 10px", background: "none", border: "1px solid #DEE2E6", borderRadius: 3, color: "#868E96", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace" }}>
+                Export PNG
+              </button>
+            )}
+            {tutorialStep === -1 && (
+              <button
+                title="Replay tutorial"
+                onClick={() => {
+                  localStorage.removeItem("deeproot-tutorial-completed");
+                  window.location.hash = "";
+                  window.location.reload();
+                }}
+                style={{ fontSize: 13, padding: "4px 8px", background: "none", border: "1px solid #DEE2E6", borderRadius: 3, color: "#ADB5BD", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace" }}>
+                ?
+              </button>
+            )}
           </div>
         </div>
 
@@ -697,7 +718,7 @@ export default function ChallengeMap() {
           </svg>
           {nodes.map((node) =>
             positions[node.id] ? (
-              <NodeCard key={node.id} node={node} pos={positions[node.id]} onSelect={setSelectedId} isSelected={selectedId === node.id} onAddChild={addChild} childCount={getChildCount(node.id)} />
+              <NodeCard key={node.id} node={node} pos={positions[node.id]} onSelect={setSelectedId} isSelected={selectedId === node.id} onAddChild={addChild} childCount={getChildCount(node.id)} hideDep={tutorialStep >= 1 && tutorialStep <= 6} />
             ) : null
           )}
         </div>
@@ -1083,7 +1104,7 @@ export default function ChallengeMap() {
       </div>
 
       {/* Sidebar */}
-      <div style={{ width: 300, borderLeft: "1px solid #E9ECEF", background: "#FFFFFF", display: "flex", flexDirection: "column", overflowY: "auto", flexShrink: 0 }}>
+      {tutorialStep === -1 && <div style={{ width: 300, borderLeft: "1px solid #E9ECEF", background: "#FFFFFF", display: "flex", flexDirection: "column", overflowY: "auto", flexShrink: 0 }}>
         <div style={{ display: "flex", borderBottom: "1px solid #E9ECEF" }}>
           {([{ id: "edit" as const, label: "Node" }, { id: "actions" as const, label: "Actions" }]).map((tab) => (
             <button key={tab.id} onClick={() => setSidebarTab(tab.id)}
@@ -1123,7 +1144,7 @@ export default function ChallengeMap() {
             ))}
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 }
