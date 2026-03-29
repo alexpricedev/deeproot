@@ -1341,6 +1341,11 @@ export default function ChallengeMap() {
             <p style={{ margin: "0 0 20px 0", fontSize: 13, color: "#495057", lineHeight: 1.6 }}>
               {"Constraints, considerations, and actions \u2014 that\u2019s the whole system. Now try it with something you actually care about."}
             </p>
+            <p style={{ margin: "0 0 20px 0", fontSize: 13, color: "#495057", lineHeight: 1.6 }}>
+              When you're ready, hit <strong>Save</strong> to get a unique link for your map.
+              Share it with anyone — they can remix your map without changing yours.
+              No account needed. Save as many different maps as you want.
+            </p>
             <button
               onClick={() => {
                 localStorage.setItem("deeproot-tutorial-completed", "true");
