@@ -491,52 +491,6 @@ function TutorialTooltip({
 }
 
 
-function PlaceholderNode({
-  pos,
-  color,
-  onClick,
-}: {
-  pos: Position;
-  color: string;
-  onClick: () => void;
-}) {
-  return (
-    <div
-      tabIndex={0}
-      role="button"
-      onClick={onClick}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClick();
-        }
-      }}
-      style={{
-        position: "absolute",
-        left: pos.x,
-        top: pos.y,
-        width: NODE_W,
-        minHeight: NODE_H - 20,
-        border: `2px dashed ${color}`,
-        borderRadius: 6,
-        background: "rgba(255,255,255,0.6)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        cursor: "pointer",
-        fontSize: 12,
-        color: color,
-        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        fontWeight: 500,
-        boxSizing: "border-box",
-        userSelect: "none",
-      }}
-    >
-      Click to reveal
-    </div>
-  );
-}
-
 function SaveModal({ url, onClose }: { url: string; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -709,41 +663,14 @@ export default function ChallengeMap() {
 
   const positions = useMemo(() => computeLayout(nodes, edges), [nodes, edges]);
 
-  const tutorialPlaceholderPositions = useMemo(() => {
-    const goalPos = positions["tutorial-goal"];
-    if (!goalPos) return null;
-    const row1Y = goalPos.y + NODE_H + V_GAP;
-    const row2Y = goalPos.y + 2 * (NODE_H + V_GAP);
-    // Position children below the goal with all positive x coordinates.
-    // Left column starts at x=40, center and right offset from there.
-    const leftX = 40;
-    const centerX = leftX + NODE_W + H_GAP;
-    const rightX = centerX + NODE_W + H_GAP;
-    return {
-      constraint: { x: leftX, y: row1Y },
-      consideration: { x: centerX, y: row1Y },
-      action: { x: rightX, y: row1Y },
-      actionSub1: { x: leftX, y: row2Y },
-      actionSub2: { x: centerX, y: row2Y },
-    };
-  }, [positions]);
-
   // Center the root node horizontally on first load
   useEffect(() => {
     if (pan === null && canvasRef.current) {
       const rootPos = positions[nodes[0]?.id];
       if (rootPos) {
         const canvasWidth = canvasRef.current.clientWidth;
-        // During tutorial, center the full 3-column layout instead of just the root
-        if (tutorialStep >= 1 && tutorialStep <= 6) {
-          const totalW = 3 * NODE_W + 2 * H_GAP; // width of 3 columns
-          const layoutCenterX = 40 + totalW / 2; // center of the tutorial layout
-          const centerX = canvasWidth / 2 - layoutCenterX;
-          setPan({ x: centerX, y: 20 });
-        } else {
-          const centerX = (canvasWidth - NODE_W) / 2 - rootPos.x;
-          setPan({ x: centerX, y: 0 });
-        }
+        const centerX = (canvasWidth - NODE_W) / 2 - rootPos.x;
+        setPan({ x: centerX, y: 0 });
       } else {
         setPan({ x: 0, y: 0 });
       }
@@ -804,6 +731,35 @@ export default function ChallengeMap() {
     setSelectedId(newId);
     setSidebarTab("edit");
   }, []);
+
+  const handleAddChild = useCallback((parentId: string) => {
+    if (parentId === "tutorial-goal" && tutorialStep >= 3 && tutorialStep <= 5) {
+      if (tutorialStep === 3 && !tutorialRevealed.has("constraint")) {
+        setNodes((prev) => [...prev, { id: "tutorial-constraint", label: "No cold weather gear", type: "constraint", status: "open", notes: "" }]);
+        setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-constraint" }]);
+        setTutorialRevealed((prev) => new Set(prev).add("constraint"));
+      } else if (tutorialStep === 4 && !tutorialRevealed.has("consideration")) {
+        setNodes((prev) => [...prev, { id: "tutorial-consideration", label: "Best season: July-Sept", type: "consideration", status: "open", notes: "" }]);
+        setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-consideration" }]);
+        setTutorialRevealed((prev) => new Set(prev).add("consideration"));
+      } else if (tutorialStep === 5 && !tutorialRevealed.has("action")) {
+        setNodes((prev) => [...prev, { id: "tutorial-action-1", label: "Book a guide service", type: "action", status: "open", notes: "" }]);
+        setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-action-1" }]);
+        setTutorialRevealed((prev) => new Set(prev).add("action"));
+        tutorialTimers.current.push(setTimeout(() => {
+          setNodes((prev) => [...prev, { id: "tutorial-action-2", label: "Rent gear from REI", type: "action", status: "open", notes: "" }]);
+          setEdges((prev) => [...prev, { from: "tutorial-constraint", to: "tutorial-action-2" }]);
+        }, 400));
+        tutorialTimers.current.push(setTimeout(() => {
+          setNodes((prev) => [...prev, { id: "tutorial-action-3", label: "Plan for August trip", type: "action", status: "open", notes: "" }]);
+          setEdges((prev) => [...prev, { from: "tutorial-consideration", to: "tutorial-action-3" }]);
+          tutorialTimers.current.push(setTimeout(() => setTutorialStep(6), 600));
+        }, 800));
+      }
+      return;
+    }
+    addChild(parentId);
+  }, [tutorialStep, tutorialRevealed, addChild]);
 
   const updateNode = useCallback((updated: MapNode) => {
     setNodes((prev) => prev.map((n) => (n.id === updated.id ? updated : n)));
@@ -1007,113 +963,12 @@ export default function ChallengeMap() {
             {edges.map((edge) => (
               <ConnectionLine key={`${edge.from}-${edge.to}`} from={edge.from} to={edge.to} positions={positions} />
             ))}
-            {/* Tutorial dashed connection lines */}
-            {tutorialStep === 3 && tutorialPlaceholderPositions && !tutorialRevealed.has("constraint") && (() => {
-              const goalPos = positions["tutorial-goal"];
-              if (!goalPos) return null;
-              const cp = tutorialPlaceholderPositions.constraint;
-              const x1 = goalPos.x + NODE_W / 2;
-              const y1 = goalPos.y + NODE_H;
-              const x2 = cp.x + NODE_W / 2;
-              const y2 = cp.y;
-              const midY = (y1 + y2) / 2;
-              return (
-                <path
-                  d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
-                  stroke="#CED4DA"
-                  strokeWidth="1.5"
-                  strokeDasharray="6 4"
-                  fill="none"
-                />
-              );
-            })()}
-            {tutorialStep === 4 && tutorialPlaceholderPositions && !tutorialRevealed.has("consideration") && (() => {
-              const goalPos = positions["tutorial-goal"];
-              if (!goalPos) return null;
-              const cp = tutorialPlaceholderPositions.consideration;
-              const x1 = goalPos.x + NODE_W / 2;
-              const y1 = goalPos.y + NODE_H;
-              const x2 = cp.x + NODE_W / 2;
-              const y2 = cp.y;
-              const midY = (y1 + y2) / 2;
-              return (
-                <path
-                  d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
-                  stroke="#CED4DA"
-                  strokeWidth="1.5"
-                  strokeDasharray="6 4"
-                  fill="none"
-                />
-              );
-            })()}
-            {tutorialStep === 5 && tutorialPlaceholderPositions && !tutorialRevealed.has("action") && (() => {
-              const goalPos = positions["tutorial-goal"];
-              if (!goalPos) return null;
-              const ap = tutorialPlaceholderPositions.action;
-              const x1 = goalPos.x + NODE_W / 2;
-              const y1 = goalPos.y + NODE_H;
-              const x2 = ap.x + NODE_W / 2;
-              const y2 = ap.y;
-              const midY = (y1 + y2) / 2;
-              return (
-                <path
-                  d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
-                  stroke="#CED4DA"
-                  strokeWidth="1.5"
-                  strokeDasharray="6 4"
-                  fill="none"
-                />
-              );
-            })()}
             </g>
           </svg>
           {nodes.map((node) =>
             positions[node.id] ? (
-              <NodeCard key={node.id} node={node} pos={positions[node.id]} onSelect={setSelectedId} isSelected={selectedId === node.id} onAddChild={addChild} childCount={getChildCount(node.id)} hideDep={tutorialStep >= 1 && tutorialStep <= 6} />
+              <NodeCard key={node.id} node={node} pos={positions[node.id]} onSelect={setSelectedId} isSelected={selectedId === node.id} onAddChild={handleAddChild} childCount={getChildCount(node.id)} hideDep={tutorialStep >= 1 && tutorialStep <= 6 && !(node.id === "tutorial-goal" && tutorialStep >= 3 && tutorialStep <= 5 && !tutorialRevealed.has(tutorialStep === 3 ? "constraint" : tutorialStep === 4 ? "consideration" : "action"))} />
             ) : null
-          )}
-          {/* Tutorial placeholder nodes */}
-          {tutorialStep === 3 && tutorialPlaceholderPositions && !tutorialRevealed.has("constraint") && (
-            <PlaceholderNode
-              pos={tutorialPlaceholderPositions.constraint}
-              color={NODE_TYPES.constraint.color}
-              onClick={() => {
-                setNodes((prev) => [...prev, { id: "tutorial-constraint", label: "No cold weather gear", type: "constraint", status: "open", notes: "" }]);
-                setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-constraint" }]);
-                setTutorialRevealed((prev) => new Set(prev).add("constraint"));
-              }}
-            />
-          )}
-          {tutorialStep === 4 && tutorialPlaceholderPositions && !tutorialRevealed.has("consideration") && (
-            <PlaceholderNode
-              pos={tutorialPlaceholderPositions.consideration}
-              color={NODE_TYPES.consideration.color}
-              onClick={() => {
-                setNodes((prev) => [...prev, { id: "tutorial-consideration", label: "Best season: July-Sept", type: "consideration", status: "open", notes: "" }]);
-                setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-consideration" }]);
-                setTutorialRevealed((prev) => new Set(prev).add("consideration"));
-              }}
-            />
-          )}
-          {tutorialStep === 5 && tutorialPlaceholderPositions && !tutorialRevealed.has("action") && (
-            <PlaceholderNode
-              pos={tutorialPlaceholderPositions.action}
-              color={NODE_TYPES.action.color}
-              onClick={() => {
-                setNodes((prev) => [...prev, { id: "tutorial-action-1", label: "Book a guide service", type: "action", status: "open", notes: "" }]);
-                setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-action-1" }]);
-                setTutorialRevealed((prev) => new Set(prev).add("action"));
-                tutorialTimers.current.push(setTimeout(() => {
-                  setNodes((prev) => [...prev, { id: "tutorial-action-2", label: "Rent gear from REI", type: "action", status: "open", notes: "" }]);
-                  setEdges((prev) => [...prev, { from: "tutorial-constraint", to: "tutorial-action-2" }]);
-                }, 400));
-                tutorialTimers.current.push(setTimeout(() => {
-                  setNodes((prev) => [...prev, { id: "tutorial-action-3", label: "Plan for August trip", type: "action", status: "open", notes: "" }]);
-                  setEdges((prev) => [...prev, { from: "tutorial-consideration", to: "tutorial-action-3" }]);
-                  tutorialTimers.current.push(setTimeout(() => setTutorialStep(6), 600));
-                }, 800));
-              }}
-            />
           )}
         </div>
 
@@ -1246,8 +1101,8 @@ export default function ChallengeMap() {
           </TutorialTooltip>
         )}
 
-        {/* Tutorial Stage 3: The Constraint — tooltips only (SVG + placeholders are in tree layer) */}
-        {tutorialStep === 3 && tutorialPlaceholderPositions && (
+        {/* Tutorial Stage 3: The Constraint */}
+        {tutorialStep === 3 && (
           <>
             {!tutorialRevealed.has("constraint") && (
               <TutorialTooltip
@@ -1255,9 +1110,9 @@ export default function ChallengeMap() {
                 positions={positions}
                 panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
               >
-                <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>What's standing in your way?</h4>
+                <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>{"What\u2019s standing in your way?"}</h4>
                 <p style={{ margin: 0, fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
-                  Click the dashed box below to reveal a constraint.
+                  Click <strong style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>+ dep</strong> on the goal card to add a constraint.
                 </p>
               </TutorialTooltip>
             )}
@@ -1286,8 +1141,8 @@ export default function ChallengeMap() {
           </>
         )}
 
-        {/* Tutorial Stage 4: The Consideration — tooltips only (SVG + placeholders are in tree layer) */}
-        {tutorialStep === 4 && tutorialPlaceholderPositions && (
+        {/* Tutorial Stage 4: The Consideration */}
+        {tutorialStep === 4 && (
           <>
             {!tutorialRevealed.has("consideration") && (
               <TutorialTooltip
@@ -1297,7 +1152,7 @@ export default function ChallengeMap() {
               >
                 <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>What do you need to keep in mind?</h4>
                 <p style={{ margin: 0, fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
-                  Click the dashed box below to reveal a consideration.
+                  Click <strong style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>+ dep</strong> again to add a consideration.
                 </p>
               </TutorialTooltip>
             )}
@@ -1325,8 +1180,8 @@ export default function ChallengeMap() {
           </>
         )}
 
-        {/* Tutorial Stage 5: The Actions — tooltips only (SVG + placeholders are in tree layer) */}
-        {tutorialStep === 5 && tutorialPlaceholderPositions && (
+        {/* Tutorial Stage 5: The Actions */}
+        {tutorialStep === 5 && (
           <>
             {!tutorialRevealed.has("action") && (
               <TutorialTooltip
@@ -1336,7 +1191,7 @@ export default function ChallengeMap() {
               >
                 <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>What will you actually do?</h4>
                 <p style={{ margin: 0, fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
-                  Actions are concrete steps. Click the dashed box to reveal them.
+                  Actions are concrete steps. Click <strong style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>+ dep</strong> one more time.
                 </p>
               </TutorialTooltip>
             )}
