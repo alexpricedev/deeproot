@@ -972,7 +972,7 @@ export default function ChallengeMap() {
                 <button
                   onClick={() => { window.open(window.location.origin + window.location.pathname + "?new=1", "_blank"); }}
                   style={{ fontSize: 10, padding: "4px 10px", background: "none", border: "1px solid #DEE2E6", borderRadius: 3, color: "#868E96", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace" }}>
-                  + New Deeproot
+                  + New
                 </button>
               </Tooltip>
             )}
