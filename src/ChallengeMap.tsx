@@ -1,12 +1,14 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import html2canvas from "html2canvas";
 
-function saveToHash(nodes: MapNode[], edges: MapEdge[]) {
+function generateShareUrl(nodes: MapNode[], edges: MapEdge[]): string {
   try {
     const data = JSON.stringify({ nodes, edges });
     const encoded = btoa(encodeURIComponent(data));
-    window.history.replaceState(null, "", "#" + encoded);
-  } catch { /* ignore encoding errors */ }
+    return window.location.origin + window.location.pathname + "#" + encoded;
+  } catch {
+    return window.location.origin + window.location.pathname;
+  }
 }
 
 function loadFromHash(): { nodes: MapNode[]; edges: MapEdge[] } | null {
@@ -535,17 +537,148 @@ function PlaceholderNode({
   );
 }
 
+function SaveModal({ url, onClose }: { url: string; onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        zIndex: 100, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      }}
+    >
+      <div style={{
+        background: "#fff", borderRadius: 12, padding: 28, maxWidth: 460, width: "90%",
+        boxShadow: "0 16px 48px rgba(0,0,0,0.15)", position: "relative",
+      }}>
+        <button
+          onClick={onClose}
+          style={{
+            position: "absolute", top: 12, right: 12, background: "none",
+            border: "none", fontSize: 18, color: "#868E96", cursor: "pointer",
+          }}
+        >×</button>
+
+        <h3 style={{ margin: "0 0 8px 0", fontSize: 18, fontWeight: 700, color: "#212529" }}>
+          Deeproot saved
+        </h3>
+
+        <p style={{ margin: "0 0 16px 0", fontSize: 13, color: "#495057", lineHeight: 1.6 }}>
+          Your Deeproot is saved in this URL. Every save creates a unique link —
+          share it freely. Others can remix or branch from your map without
+          affecting your version. No account needed.
+        </p>
+
+        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+          <input
+            ref={inputRef}
+            readOnly
+            value={url}
+            onFocus={(e) => e.target.select()}
+            style={{
+              flex: 1, padding: "8px 12px", fontSize: 12, border: "1px solid #DEE2E6",
+              borderRadius: 6, background: "#F8F9FA", color: "#495057",
+              fontFamily: "'JetBrains Mono', monospace", outline: "none",
+            }}
+          />
+          <button
+            onClick={handleCopy}
+            style={{
+              padding: "8px 16px", fontSize: 12, fontWeight: 600,
+              background: copied ? "#2F9E44" : "#212529", color: "#fff",
+              border: "none", borderRadius: 6, cursor: "pointer",
+              fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap",
+              transition: "background 0.2s",
+            }}
+          >
+            {copied ? "Copied!" : "Copy link"}
+          </button>
+        </div>
+
+        <p style={{ margin: 0, fontSize: 11, color: "#ADB5BD", lineHeight: 1.5 }}>
+          Bookmark this link or paste it somewhere safe. To start a new map, just visit Deeproot without a link.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ResumePrompt({ onLoad, onNew }: { onLoad: () => void; onNew: () => void }) {
+  return (
+    <div style={{
+      position: "absolute", inset: 0, display: "flex", alignItems: "center",
+      justifyContent: "center", zIndex: 50, background: "rgba(248,249,250,0.95)",
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    }}>
+      <div style={{ textAlign: "center", maxWidth: 400, padding: 32 }}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#868E96" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12 }}><path d="m8 3 4 8 5-5 5 15H2L8 3z"/><path d="M4.14 15.08c2.62-1.57 5.24-1.43 7.86.42 2.74 1.94 5.49 2 8.23.19"/></svg>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: "#212529", marginBottom: 8 }}>Welcome back</h2>
+        <p style={{ fontSize: 14, color: "#495057", lineHeight: 1.6, marginBottom: 24 }}>
+          We found a previous Deeproot. Want to pick up where you left off?
+        </p>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+          <button
+            onClick={onLoad}
+            style={{
+              fontSize: 14, fontWeight: 600, padding: "12px 24px",
+              background: "#E8590C", color: "#fff", border: "none",
+              borderRadius: 8, cursor: "pointer",
+            }}
+          >
+            Load previous map
+          </button>
+          <button
+            onClick={onNew}
+            style={{
+              fontSize: 14, padding: "12px 24px", background: "none",
+              border: "1px solid #DEE2E6", borderRadius: 8, color: "#495057",
+              cursor: "pointer",
+            }}
+          >
+            Start fresh
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ChallengeMap() {
   const initial = useMemo(() => loadFromHash(), []);
 
+  const [showResume, setShowResume] = useState<boolean>(() => {
+    // If URL has hash data, load directly — no prompt needed
+    if (window.location.hash.length > 1) return false;
+    // If ?new=1, skip prompt and strip the param
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("new")) {
+      window.history.replaceState(null, "", window.location.pathname);
+      return false;
+    }
+    // Check localStorage for a previous save
+    return !!localStorage.getItem("deeproot-last-save");
+  });
+
   const [tutorialStep, setTutorialStep] = useState<number>(() => {
     if (initial !== null) return -1;
+    if (showResume) return -1;
     if (typeof window !== "undefined" && localStorage.getItem("deeproot-tutorial-completed")) return -1;
     return 1;
   });
-  const [enableHashSave, setEnableHashSave] = useState<boolean>(initial !== null);
-  const enableHashSaveRef = useRef(enableHashSave);
-  enableHashSaveRef.current = enableHashSave;
   const [tutorialRevealed, setTutorialRevealed] = useState<Set<string>>(new Set());
 
   // Inject tutorial CSS animations
@@ -566,12 +699,8 @@ export default function ChallengeMap() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sidebarTab, setSidebarTab] = useState<"edit" | "actions">("edit");
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [saveModalUrl, setSaveModalUrl] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (enableHashSave) {
-      saveToHash(nodes, edges);
-    }
-  }, [nodes, edges, enableHashSave]);
   const [pan, setPan] = useState<{ x: number; y: number } | null>(null);
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
@@ -668,7 +797,6 @@ export default function ChallengeMap() {
   useEffect(() => () => tutorialTimers.current.forEach(clearTimeout), []);
 
   const addChild = useCallback((parentId: string) => {
-    if (!enableHashSaveRef.current) setEnableHashSave(true);
     const newId = generateId();
     newNodeId.current = newId;
     setNodes((prev) => [...prev, { id: newId, label: "New dependency", type: "constraint", status: "open", notes: "" }]);
@@ -678,12 +806,10 @@ export default function ChallengeMap() {
   }, []);
 
   const updateNode = useCallback((updated: MapNode) => {
-    if (!enableHashSaveRef.current) setEnableHashSave(true);
     setNodes((prev) => prev.map((n) => (n.id === updated.id ? updated : n)));
   }, []);
 
   const deleteNode = useCallback((id: string) => {
-    if (!enableHashSaveRef.current) setEnableHashSave(true);
     if (id === "root" && nodes.length === 1) return;
     const parentEdge = edges.find((e) => e.to === id);
     const descendants = new Set<string>();
@@ -769,6 +895,22 @@ export default function ChallengeMap() {
     }
   }, [canvasW, canvasH]);
 
+  const [savedHash, setSavedHash] = useState(() => window.location.hash.slice(1));
+
+  const hasUnsavedChanges = useMemo(() => {
+    const currentHash = generateShareUrl(nodes, edges).split("#")[1] || "";
+    return currentHash !== savedHash;
+  }, [nodes, edges, savedHash]);
+
+  const handleSave = useCallback(() => {
+    const url = generateShareUrl(nodes, edges);
+    const hash = url.split("#")[1] || "";
+    window.history.replaceState(null, "", "#" + hash);
+    localStorage.setItem("deeproot-last-save", url);
+    setSavedHash(hash);
+    setSaveModalUrl(url);
+  }, [nodes, edges]);
+
   return (
     <div style={{ display: "flex", width: "100%", height: "100vh", background: "#F8F9FA", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", overflow: "hidden" }}>
       <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -817,12 +959,20 @@ export default function ChallengeMap() {
                 </span>
               ) : null
             )}
+            {tutorialStep === -1 && nodes.length > 0 && (
+              <Tooltip label="Save and get shareable link">
+                <button onClick={handleSave}
+                  style={{ fontSize: 10, padding: "4px 10px", background: hasUnsavedChanges ? "#212529" : "none", border: hasUnsavedChanges ? "1px solid #212529" : "1px solid #DEE2E6", borderRadius: 3, color: hasUnsavedChanges ? "#FFFFFF" : "#868E96", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace", fontWeight: 600 }}>
+                  Save
+                </button>
+              </Tooltip>
+            )}
             {tutorialStep === -1 && (
               <Tooltip label="Open in new tab">
                 <button
-                  onClick={() => { window.open(window.location.origin + window.location.pathname, "_blank"); }}
+                  onClick={() => { window.open(window.location.origin + window.location.pathname + "?new=1", "_blank"); }}
                   style={{ fontSize: 10, padding: "4px 10px", background: "none", border: "1px solid #DEE2E6", borderRadius: 3, color: "#868E96", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace" }}>
-                  + New Deeproot
+                  + New
                 </button>
               </Tooltip>
             )}
@@ -979,17 +1129,11 @@ export default function ChallengeMap() {
                 setNodes([{ id: newId, label: "My goal", type: "goal", status: "open", notes: "" }]);
                 setSelectedId(newId);
                 setSidebarTab("edit");
-                if (!enableHashSaveRef.current) setEnableHashSave(true);
               }}
               style={{ fontSize: 14, padding: "12px 28px", background: NODE_TYPES.goal.color, color: "#FFFFFF", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}
             >
               Create your first goal
             </button>
-          </div>
-        )}
-{tutorialStep === -1 && nodes.length > 0 && (
-          <div style={{ position: "absolute", bottom: 8, right: 16, fontSize: 10, color: "#868E96", zIndex: 20 }}>
-            Progress saved in URL — bookmark or share anytime
           </div>
         )}
 
@@ -1028,6 +1172,36 @@ export default function ChallengeMap() {
           </div>
         )}
 
+        {showResume && (
+          <ResumePrompt
+            onLoad={() => {
+              const savedUrl = localStorage.getItem("deeproot-last-save");
+              if (savedUrl) {
+                try {
+                  const hash = new URL(savedUrl).hash.slice(1);
+                  const data = JSON.parse(decodeURIComponent(atob(hash)));
+                  if (Array.isArray(data.nodes) && Array.isArray(data.edges)) {
+                    setNodes(data.nodes);
+                    setEdges(data.edges);
+                    window.history.replaceState(null, "", savedUrl);
+                  }
+                } catch {
+                  // Fallback: full reload
+                  window.location.replace(savedUrl);
+                  window.location.reload();
+                }
+              }
+              setShowResume(false);
+            }}
+            onNew={() => {
+              setShowResume(false);
+              if (!localStorage.getItem("deeproot-tutorial-completed")) {
+                setTutorialStep(1);
+              }
+            }}
+          />
+        )}
+
         {tutorialStep === 1 && (
           <WelcomeOverlay
             onStart={() => {
@@ -1043,7 +1217,6 @@ export default function ChallengeMap() {
             }}
             onSkip={() => {
               localStorage.setItem("deeproot-tutorial-completed", "true");
-              setEnableHashSave(true);
               setTutorialStep(-1);
             }}
           />
@@ -1204,13 +1377,17 @@ export default function ChallengeMap() {
             <p style={{ margin: "0 0 20px 0", fontSize: 13, color: "#495057", lineHeight: 1.6 }}>
               {"Constraints, considerations, and actions \u2014 that\u2019s the whole system. Now try it with something you actually care about."}
             </p>
+            <p style={{ margin: "0 0 20px 0", fontSize: 13, color: "#495057", lineHeight: 1.6 }}>
+              When you're ready, hit <strong>Save</strong> to get a unique link for your map.
+              Share it with anyone — they can remix your map without changing yours.
+              No account needed. Save as many different maps as you want.
+            </p>
             <button
               onClick={() => {
                 localStorage.setItem("deeproot-tutorial-completed", "true");
                 setNodes([]);
                 setEdges([]);
                 setTutorialRevealed(new Set());
-                setEnableHashSave(true);
                 setSelectedId(null);
                 setTutorialStep(-1);
               }}
@@ -1303,6 +1480,7 @@ export default function ChallengeMap() {
           </div>
         )}
       </div>}
+      {saveModalUrl && <SaveModal url={saveModalUrl} onClose={() => setSaveModalUrl(null)} />}
     </div>
   );
 }
