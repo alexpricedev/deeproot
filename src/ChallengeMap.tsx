@@ -1,12 +1,10 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import html2canvas from "html2canvas";
 
-function saveToHash(nodes: MapNode[], edges: MapEdge[]) {
-  try {
-    const data = JSON.stringify({ nodes, edges });
-    const encoded = btoa(encodeURIComponent(data));
-    window.history.replaceState(null, "", "#" + encoded);
-  } catch { /* ignore encoding errors */ }
+export function generateShareUrl(nodes: MapNode[], edges: MapEdge[]): string {
+  const data = JSON.stringify({ nodes, edges });
+  const encoded = btoa(encodeURIComponent(data));
+  return window.location.origin + window.location.pathname + "#" + encoded;
 }
 
 function loadFromHash(): { nodes: MapNode[]; edges: MapEdge[] } | null {
@@ -543,9 +541,6 @@ export default function ChallengeMap() {
     if (typeof window !== "undefined" && localStorage.getItem("deeproot-tutorial-completed")) return -1;
     return 1;
   });
-  const [enableHashSave, setEnableHashSave] = useState<boolean>(initial !== null);
-  const enableHashSaveRef = useRef(enableHashSave);
-  enableHashSaveRef.current = enableHashSave;
   const [tutorialRevealed, setTutorialRevealed] = useState<Set<string>>(new Set());
 
   // Inject tutorial CSS animations
@@ -567,11 +562,6 @@ export default function ChallengeMap() {
   const [sidebarTab, setSidebarTab] = useState<"edit" | "actions">("edit");
   const [showShortcuts, setShowShortcuts] = useState(false);
 
-  useEffect(() => {
-    if (enableHashSave) {
-      saveToHash(nodes, edges);
-    }
-  }, [nodes, edges, enableHashSave]);
   const [pan, setPan] = useState<{ x: number; y: number } | null>(null);
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
@@ -668,7 +658,6 @@ export default function ChallengeMap() {
   useEffect(() => () => tutorialTimers.current.forEach(clearTimeout), []);
 
   const addChild = useCallback((parentId: string) => {
-    if (!enableHashSaveRef.current) setEnableHashSave(true);
     const newId = generateId();
     newNodeId.current = newId;
     setNodes((prev) => [...prev, { id: newId, label: "New dependency", type: "constraint", status: "open", notes: "" }]);
@@ -678,12 +667,10 @@ export default function ChallengeMap() {
   }, []);
 
   const updateNode = useCallback((updated: MapNode) => {
-    if (!enableHashSaveRef.current) setEnableHashSave(true);
     setNodes((prev) => prev.map((n) => (n.id === updated.id ? updated : n)));
   }, []);
 
   const deleteNode = useCallback((id: string) => {
-    if (!enableHashSaveRef.current) setEnableHashSave(true);
     if (id === "root" && nodes.length === 1) return;
     const parentEdge = edges.find((e) => e.to === id);
     const descendants = new Set<string>();
@@ -979,17 +966,11 @@ export default function ChallengeMap() {
                 setNodes([{ id: newId, label: "My goal", type: "goal", status: "open", notes: "" }]);
                 setSelectedId(newId);
                 setSidebarTab("edit");
-                if (!enableHashSaveRef.current) setEnableHashSave(true);
               }}
               style={{ fontSize: 14, padding: "12px 28px", background: NODE_TYPES.goal.color, color: "#FFFFFF", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}
             >
               Create your first goal
             </button>
-          </div>
-        )}
-{tutorialStep === -1 && nodes.length > 0 && (
-          <div style={{ position: "absolute", bottom: 8, right: 16, fontSize: 10, color: "#868E96", zIndex: 20 }}>
-            Progress saved in URL — bookmark or share anytime
           </div>
         )}
 
@@ -1043,7 +1024,6 @@ export default function ChallengeMap() {
             }}
             onSkip={() => {
               localStorage.setItem("deeproot-tutorial-completed", "true");
-              setEnableHashSave(true);
               setTutorialStep(-1);
             }}
           />
@@ -1210,7 +1190,6 @@ export default function ChallengeMap() {
                 setNodes([]);
                 setEdges([]);
                 setTutorialRevealed(new Set());
-                setEnableHashSave(true);
                 setSelectedId(null);
                 setTutorialStep(-1);
               }}
