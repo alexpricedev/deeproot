@@ -1,10 +1,14 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import html2canvas from "html2canvas";
 
-export function generateShareUrl(nodes: MapNode[], edges: MapEdge[]): string {
-  const data = JSON.stringify({ nodes, edges });
-  const encoded = btoa(encodeURIComponent(data));
-  return window.location.origin + window.location.pathname + "#" + encoded;
+function generateShareUrl(nodes: MapNode[], edges: MapEdge[]): string {
+  try {
+    const data = JSON.stringify({ nodes, edges });
+    const encoded = btoa(encodeURIComponent(data));
+    return window.location.origin + window.location.pathname + "#" + encoded;
+  } catch {
+    return window.location.origin + window.location.pathname;
+  }
 }
 
 function loadFromHash(): { nodes: MapNode[]; edges: MapEdge[] } | null {
@@ -536,6 +540,10 @@ function PlaceholderNode({
 function SaveModal({ url, onClose }: { url: string; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(url).then(() => {
