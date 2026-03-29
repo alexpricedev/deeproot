@@ -675,6 +675,7 @@ export default function ChallengeMap() {
 
   const [tutorialStep, setTutorialStep] = useState<number>(() => {
     if (initial !== null) return -1;
+    if (showResume) return -1;
     if (typeof window !== "undefined" && localStorage.getItem("deeproot-tutorial-completed")) return -1;
     return 1;
   });
@@ -894,10 +895,19 @@ export default function ChallengeMap() {
     }
   }, [canvasW, canvasH]);
 
+  const [savedHash, setSavedHash] = useState(() => window.location.hash.slice(1));
+
+  const hasUnsavedChanges = useMemo(() => {
+    const currentHash = generateShareUrl(nodes, edges).split("#")[1] || "";
+    return currentHash !== savedHash;
+  }, [nodes, edges, savedHash]);
+
   const handleSave = useCallback(() => {
     const url = generateShareUrl(nodes, edges);
-    window.history.replaceState(null, "", "#" + url.split("#")[1]);
+    const hash = url.split("#")[1] || "";
+    window.history.replaceState(null, "", "#" + hash);
     localStorage.setItem("deeproot-last-save", url);
+    setSavedHash(hash);
     setSaveModalUrl(url);
   }, [nodes, edges]);
 
@@ -952,7 +962,7 @@ export default function ChallengeMap() {
             {tutorialStep === -1 && nodes.length > 0 && (
               <Tooltip label="Save and get shareable link">
                 <button onClick={handleSave}
-                  style={{ fontSize: 10, padding: "4px 10px", background: "#212529", border: "1px solid #212529", borderRadius: 3, color: "#FFFFFF", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace", fontWeight: 600 }}>
+                  style={{ fontSize: 10, padding: "4px 10px", background: hasUnsavedChanges ? "#212529" : "none", border: hasUnsavedChanges ? "1px solid #212529" : "1px solid #DEE2E6", borderRadius: 3, color: hasUnsavedChanges ? "#FFFFFF" : "#868E96", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace", fontWeight: 600 }}>
                   Save
                 </button>
               </Tooltip>
@@ -1167,10 +1177,28 @@ export default function ChallengeMap() {
             onLoad={() => {
               const savedUrl = localStorage.getItem("deeproot-last-save");
               if (savedUrl) {
-                window.location.href = savedUrl;
+                try {
+                  const hash = new URL(savedUrl).hash.slice(1);
+                  const data = JSON.parse(decodeURIComponent(atob(hash)));
+                  if (Array.isArray(data.nodes) && Array.isArray(data.edges)) {
+                    setNodes(data.nodes);
+                    setEdges(data.edges);
+                    window.history.replaceState(null, "", savedUrl);
+                  }
+                } catch {
+                  // Fallback: full reload
+                  window.location.replace(savedUrl);
+                  window.location.reload();
+                }
+              }
+              setShowResume(false);
+            }}
+            onNew={() => {
+              setShowResume(false);
+              if (!localStorage.getItem("deeproot-tutorial-completed")) {
+                setTutorialStep(1);
               }
             }}
-            onNew={() => setShowResume(false)}
           />
         )}
 
