@@ -533,8 +533,6 @@ function PlaceholderNode({
   );
 }
 
-// @ts-ignore: SaveModal is used in Task 3
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function SaveModal({ url, onClose }: { url: string; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -639,6 +637,7 @@ export default function ChallengeMap() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sidebarTab, setSidebarTab] = useState<"edit" | "actions">("edit");
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [saveModalUrl, setSaveModalUrl] = useState<string | null>(null);
 
   const [pan, setPan] = useState<{ x: number; y: number } | null>(null);
   const [isPanning, setIsPanning] = useState(false);
@@ -834,6 +833,13 @@ export default function ChallengeMap() {
     }
   }, [canvasW, canvasH]);
 
+  const handleSave = useCallback(() => {
+    const url = generateShareUrl(nodes, edges);
+    window.history.replaceState(null, "", "#" + url.split("#")[1]);
+    localStorage.setItem("deeproot-last-save", url);
+    setSaveModalUrl(url);
+  }, [nodes, edges]);
+
   return (
     <div style={{ display: "flex", width: "100%", height: "100vh", background: "#F8F9FA", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", overflow: "hidden" }}>
       <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -882,10 +888,18 @@ export default function ChallengeMap() {
                 </span>
               ) : null
             )}
+            {tutorialStep === -1 && nodes.length > 0 && (
+              <Tooltip label="Save and get shareable link">
+                <button onClick={handleSave}
+                  style={{ fontSize: 10, padding: "4px 10px", background: "#212529", border: "1px solid #212529", borderRadius: 3, color: "#FFFFFF", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace", fontWeight: 600 }}>
+                  Save
+                </button>
+              </Tooltip>
+            )}
             {tutorialStep === -1 && (
               <Tooltip label="Open in new tab">
                 <button
-                  onClick={() => { window.open(window.location.origin + window.location.pathname, "_blank"); }}
+                  onClick={() => { window.open(window.location.origin + window.location.pathname + "?new=1", "_blank"); }}
                   style={{ fontSize: 10, padding: "4px 10px", background: "none", border: "1px solid #DEE2E6", borderRadius: 3, color: "#868E96", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace" }}>
                   + New Deeproot
                 </button>
@@ -1360,6 +1374,7 @@ export default function ChallengeMap() {
           </div>
         )}
       </div>}
+      {saveModalUrl && <SaveModal url={saveModalUrl} onClose={() => setSaveModalUrl(null)} />}
     </div>
   );
 }
