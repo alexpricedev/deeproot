@@ -609,8 +609,61 @@ function SaveModal({ url, onClose }: { url: string; onClose: () => void }) {
   );
 }
 
+function ResumePrompt({ onLoad, onNew }: { onLoad: () => void; onNew: () => void }) {
+  return (
+    <div style={{
+      position: "absolute", inset: 0, display: "flex", alignItems: "center",
+      justifyContent: "center", zIndex: 50, background: "rgba(248,249,250,0.95)",
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    }}>
+      <div style={{ textAlign: "center", maxWidth: 400, padding: 32 }}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#868E96" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12 }}><path d="m8 3 4 8 5-5 5 15H2L8 3z"/><path d="M4.14 15.08c2.62-1.57 5.24-1.43 7.86.42 2.74 1.94 5.49 2 8.23.19"/></svg>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: "#212529", marginBottom: 8 }}>Welcome back</h2>
+        <p style={{ fontSize: 14, color: "#495057", lineHeight: 1.6, marginBottom: 24 }}>
+          We found a previous Deeproot. Want to pick up where you left off?
+        </p>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+          <button
+            onClick={onLoad}
+            style={{
+              fontSize: 14, fontWeight: 600, padding: "12px 24px",
+              background: "#E8590C", color: "#fff", border: "none",
+              borderRadius: 8, cursor: "pointer",
+            }}
+          >
+            Load previous map
+          </button>
+          <button
+            onClick={onNew}
+            style={{
+              fontSize: 14, padding: "12px 24px", background: "none",
+              border: "1px solid #DEE2E6", borderRadius: 8, color: "#495057",
+              cursor: "pointer",
+            }}
+          >
+            Start fresh
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ChallengeMap() {
   const initial = useMemo(() => loadFromHash(), []);
+
+  const [showResume, setShowResume] = useState<boolean>(() => {
+    // If URL has hash data, load directly — no prompt needed
+    if (window.location.hash.length > 1) return false;
+    // If ?new=1, skip prompt and strip the param
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("new")) {
+      window.history.replaceState(null, "", window.location.pathname);
+      return false;
+    }
+    // Check localStorage for a previous save
+    return !!localStorage.getItem("deeproot-last-save");
+  });
 
   const [tutorialStep, setTutorialStep] = useState<number>(() => {
     if (initial !== null) return -1;
@@ -1099,6 +1152,18 @@ export default function ChallengeMap() {
               </div>
             )}
           </div>
+        )}
+
+        {showResume && (
+          <ResumePrompt
+            onLoad={() => {
+              const savedUrl = localStorage.getItem("deeproot-last-save");
+              if (savedUrl) {
+                window.location.href = savedUrl;
+              }
+            }}
+            onNew={() => setShowResume(false)}
+          />
         )}
 
         {tutorialStep === 1 && (
