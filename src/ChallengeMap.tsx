@@ -77,10 +77,31 @@ const V_GAP = 60;
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
+function estimateNodeHeight(node: MapNode): number {
+  // padding: 10 top + 10 bottom
+  // header row (type + status): ~15px + marginBottom 4
+  // label: fontSize 12, lineHeight 1.4 = ~17px/line, ~28 chars/line at NODE_W
+  // notes (if present): fontSize 10, lineHeight 1.4 = ~14px/line, marginTop 3, max 50 chars displayed
+  // dep row: marginTop 6 + ~20px
+  const availableWidth = NODE_W - 24; // padding 12px each side
+  const charsPerLine = Math.floor(availableWidth / 7);
+  const labelLines = Math.max(1, Math.ceil(node.label.length / charsPerLine));
+  const notesText = node.notes ? (node.notes.length > 50 ? node.notes.substring(0, 50) + "..." : node.notes) : "";
+  const notesLines = notesText ? Math.max(1, Math.ceil(notesText.length / (charsPerLine + 2))) : 0;
+
+  let h = 20; // padding
+  h += 19; // header + margin
+  h += labelLines * 17; // label
+  if (notesLines > 0) h += 3 + notesLines * 14; // notes
+  h += 26; // dep row
+  return Math.max(NODE_H, h);
+}
+
 function computeLayout(nodes: MapNode[], edges: MapEdge[]): Record<string, Position> {
   const childrenMap: Record<string, string[]> = {};
   const hasParent = new Set<string>();
-  nodes.forEach((n) => (childrenMap[n.id] = []));
+  const nodeMap: Record<string, MapNode> = {};
+  nodes.forEach((n) => { childrenMap[n.id] = []; nodeMap[n.id] = n; });
   edges.forEach((e) => {
     if (childrenMap[e.from]) childrenMap[e.from].push(e.to);
     hasParent.add(e.to);
@@ -102,11 +123,12 @@ function computeLayout(nodes: MapNode[], edges: MapEdge[]): Record<string, Posit
     const nodeX = x + subtreeW / 2 - NODE_W / 2;
     positions[id] = { x: nodeX, y };
 
+    const nodeH = nodeMap[id] ? estimateNodeHeight(nodeMap[id]) : NODE_H;
     if (kids.length > 0) {
       let childX = x;
       kids.forEach((kid) => {
         const kidW = getSubtreeWidth(kid);
-        layout(kid, childX, y + NODE_H + V_GAP);
+        layout(kid, childX, y + nodeH + V_GAP);
         childX += kidW + H_GAP;
       });
     }
@@ -779,7 +801,7 @@ export default function ChallengeMap() {
 
         {/* Tree layer */}
         <div ref={treeRef} style={{ transform: `translate(${pan?.x ?? 0}px, ${pan?.y ?? 0}px)`, position: "absolute", top: 50, left: 0 }}>
-          <svg style={{ position: "absolute", top: -500, left: -1000, width: 5000, height: 3000, pointerEvents: "none" }}>
+          <svg style={{ position: "absolute", top: -500, left: -1000, width: canvasW + 2000, height: canvasH + 1000, pointerEvents: "none" }}>
             <g transform="translate(1000, 500)">
             {edges.map((edge) => (
               <ConnectionLine key={`${edge.from}-${edge.to}`} from={edge.from} to={edge.to} positions={positions} />
