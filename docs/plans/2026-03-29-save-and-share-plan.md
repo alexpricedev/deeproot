@@ -14,8 +14,8 @@
 
 **Files:**
 - Modify: `src/ChallengeMap.tsx:4-9` (saveToHash function)
-- Modify: `src/ChallengeMap.tsx:501-505` (useEffect auto-save)
-- Modify: `src/ChallengeMap.tsx:601-617` (enableHashSave toggles in addChild/updateNode/deleteNode)
+- Modify: `src/ChallengeMap.tsx:570-574` (useEffect auto-save)
+- Modify: `src/ChallengeMap.tsx:546-548,671,681,686,982,1046,1213` (enableHashSave state and all references)
 
 **Step 1: Create `generateShareUrl` helper**
 
@@ -31,7 +31,7 @@ function generateShareUrl(nodes: MapNode[], edges: MapEdge[]): string {
 
 **Step 2: Remove the auto-save `useEffect`**
 
-Delete lines 501-505:
+Delete lines 570-574:
 
 ```typescript
 // DELETE THIS ENTIRE BLOCK
@@ -45,18 +45,18 @@ useEffect(() => {
 **Step 3: Remove `enableHashSave` state and all references**
 
 Delete or simplify these:
-- Line 477: `const [enableHashSave, setEnableHashSave] = useState<boolean>(initial !== null);`
-- Line 478-479: `enableHashSaveRef` and its `.current` assignment
-- Line 602: `if (!enableHashSaveRef.current) setEnableHashSave(true);` in `addChild`
-- Line 612: `if (!enableHashSaveRef.current) setEnableHashSave(true);` in `updateNode`
-- Line 617: `if (!enableHashSaveRef.current) setEnableHashSave(true);` in `deleteNode`
-- Line 909: `if (!enableHashSaveRef.current) setEnableHashSave(true);` in "Create your first goal"
-- Line 973: `setEnableHashSave(true);` in tutorial skip
-- Line 1140: `setEnableHashSave(true);` in tutorial complete
+- Line 546: `const [enableHashSave, setEnableHashSave] = useState<boolean>(initial !== null);`
+- Lines 547-548: `enableHashSaveRef` and its `.current` assignment
+- Line 671: `if (!enableHashSaveRef.current) setEnableHashSave(true);` in `addChild`
+- Line 681: `if (!enableHashSaveRef.current) setEnableHashSave(true);` in `updateNode`
+- Line 686: `if (!enableHashSaveRef.current) setEnableHashSave(true);` in `deleteNode`
+- Line 982: `if (!enableHashSaveRef.current) setEnableHashSave(true);` in "Create your first goal"
+- Line 1046: `setEnableHashSave(true);` in tutorial skip
+- Line 1213: `setEnableHashSave(true);` in tutorial complete
 
 **Step 4: Remove the bottom-right "Progress saved in URL" hint**
 
-Delete lines 917-921:
+Delete lines 990-994:
 
 ```typescript
 // DELETE THIS
@@ -205,16 +205,20 @@ const handleSave = useCallback(() => {
 
 **Step 3: Add Save button to header**
 
-In the header toolbar (around line 743), add a Save button alongside the existing buttons. Place it before "Export PNG". Only show when `tutorialStep === -1` and `nodes.length > 0`:
+In the header toolbar (around line 820), add a Save button alongside the existing buttons. Place it before "+ New Deeproot". Only show when `tutorialStep === -1` and `nodes.length > 0`. Wrap it in the existing `<Tooltip>` component to match the other header buttons:
 
 ```typescript
 {tutorialStep === -1 && nodes.length > 0 && (
-  <button onClick={handleSave}
-    style={{ fontSize: 10, padding: "4px 10px", background: "#212529", border: "1px solid #212529", borderRadius: 3, color: "#FFFFFF", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace", fontWeight: 600 }}>
-    Save
-  </button>
+  <Tooltip label="Save and get shareable link">
+    <button onClick={handleSave}
+      style={{ fontSize: 10, padding: "4px 10px", background: "#212529", border: "1px solid #212529", borderRadius: 3, color: "#FFFFFF", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace", fontWeight: 600 }}>
+      Save
+    </button>
+  </Tooltip>
 )}
 ```
+
+Note: The `Tooltip` component (defined at line 406) wraps buttons and shows a hover label pill. All existing header buttons use it.
 
 **Step 4: Render the modal**
 
@@ -226,7 +230,7 @@ At the end of the component's return, just before the closing `</div>`, render t
 
 **Step 5: Update "+ New Deeproot" button**
 
-Change the existing "+ New Deeproot" button (line 754) to append `?new=1`:
+Change the existing "+ New Deeproot" button (line 823, inside a `<Tooltip>` wrapper) to append `?new=1`:
 
 ```typescript
 onClick={() => { window.open(window.location.origin + window.location.pathname + "?new=1", "_blank"); }}
@@ -353,7 +357,7 @@ git commit -m "Add resume prompt for returning users with localStorage save"
 
 **Step 1: Add saving explanation to tutorial completion**
 
-In the tutorial step 6 completion overlay (around line 1127), add text about saving between the existing paragraph and the "Start my own map" button:
+In the tutorial step 6 completion overlay (around line 1200), add text about saving between the existing paragraph and the "Start my own map" button:
 
 ```typescript
 <p style={{ margin: "0 0 20px 0", fontSize: 13, color: "#495057", lineHeight: 1.6 }}>
