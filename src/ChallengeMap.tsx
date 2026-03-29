@@ -533,6 +533,84 @@ function PlaceholderNode({
   );
 }
 
+// @ts-ignore: SaveModal is used in Task 3
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function SaveModal({ url, onClose }: { url: string; onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        zIndex: 100, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      }}
+    >
+      <div style={{
+        background: "#fff", borderRadius: 12, padding: 28, maxWidth: 460, width: "90%",
+        boxShadow: "0 16px 48px rgba(0,0,0,0.15)", position: "relative",
+      }}>
+        <button
+          onClick={onClose}
+          style={{
+            position: "absolute", top: 12, right: 12, background: "none",
+            border: "none", fontSize: 18, color: "#868E96", cursor: "pointer",
+          }}
+        >×</button>
+
+        <h3 style={{ margin: "0 0 8px 0", fontSize: 18, fontWeight: 700, color: "#212529" }}>
+          Deeproot saved
+        </h3>
+
+        <p style={{ margin: "0 0 16px 0", fontSize: 13, color: "#495057", lineHeight: 1.6 }}>
+          Your Deeproot is saved in this URL. Every save creates a unique link —
+          share it freely. Others can remix or branch from your map without
+          affecting your version. No account needed.
+        </p>
+
+        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+          <input
+            ref={inputRef}
+            readOnly
+            value={url}
+            onFocus={(e) => e.target.select()}
+            style={{
+              flex: 1, padding: "8px 12px", fontSize: 12, border: "1px solid #DEE2E6",
+              borderRadius: 6, background: "#F8F9FA", color: "#495057",
+              fontFamily: "'JetBrains Mono', monospace", outline: "none",
+            }}
+          />
+          <button
+            onClick={handleCopy}
+            style={{
+              padding: "8px 16px", fontSize: 12, fontWeight: 600,
+              background: copied ? "#2F9E44" : "#212529", color: "#fff",
+              border: "none", borderRadius: 6, cursor: "pointer",
+              fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap",
+              transition: "background 0.2s",
+            }}
+          >
+            {copied ? "Copied!" : "Copy link"}
+          </button>
+        </div>
+
+        <p style={{ margin: 0, fontSize: 11, color: "#ADB5BD", lineHeight: 1.5 }}>
+          Bookmark this link or paste it somewhere safe. To start a new map, just visit Deeproot without a link.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function ChallengeMap() {
   const initial = useMemo(() => loadFromHash(), []);
 
