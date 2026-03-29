@@ -403,6 +403,53 @@ function WelcomeOverlay({ onStart, onSkip }: { onStart: () => void; onSkip: () =
   );
 }
 
+function Tooltip({ label, children, align = "center" }: { label: string; children: React.ReactNode; align?: "center" | "right" }) {
+  const [show, setShow] = useState(false);
+  const pillPosition = align === "right"
+    ? { right: 0 } as const
+    : { left: "50%", transform: "translateX(-50%)" } as const;
+  const arrowPosition = align === "right"
+    ? { right: 10 } as const
+    : { left: "50%", transform: "translateX(-50%)" } as const;
+  return (
+    <div
+      style={{ position: "relative", display: "inline-flex" }}
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      {children}
+      {show && (
+        <div style={{
+          position: "absolute",
+          top: "calc(100% + 8px)",
+          ...pillPosition,
+          background: "#212529",
+          color: "#fff",
+          fontSize: 11,
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          padding: "2px 8px",
+          borderRadius: 6,
+          whiteSpace: "nowrap",
+          pointerEvents: "none",
+          zIndex: 100,
+        }}>
+          <div style={{
+            position: "absolute",
+            bottom: "100%",
+            ...arrowPosition,
+            width: 0,
+            height: 0,
+            borderLeft: "5px solid transparent",
+            borderRight: "5px solid transparent",
+            borderBottom: "5px solid #212529",
+          }} />
+          {label}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TutorialTooltip({
   targetNodeId,
   positions,
@@ -771,30 +818,34 @@ export default function ChallengeMap() {
               ) : null
             )}
             {tutorialStep === -1 && (
-              <button
-                title="New canvas"
-                onClick={() => { window.open(window.location.origin + window.location.pathname, "_blank"); }}
-                style={{ fontSize: 10, padding: "4px 10px", background: "none", border: "1px solid #DEE2E6", borderRadius: 3, color: "#868E96", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace" }}>
-                + New Deeproot
-              </button>
+              <Tooltip label="Open in new tab">
+                <button
+                  onClick={() => { window.open(window.location.origin + window.location.pathname, "_blank"); }}
+                  style={{ fontSize: 10, padding: "4px 10px", background: "none", border: "1px solid #DEE2E6", borderRadius: 3, color: "#868E96", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace" }}>
+                  + New Deeproot
+                </button>
+              </Tooltip>
             )}
             {tutorialStep === -1 && (
-              <button onClick={exportPng}
-                style={{ fontSize: 10, padding: "4px 10px", background: "none", border: "1px solid #DEE2E6", borderRadius: 3, color: "#868E96", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace" }}>
-                Export PNG
-              </button>
+              <Tooltip label="Saves whole canvas">
+                <button onClick={exportPng}
+                  style={{ fontSize: 10, padding: "4px 10px", background: "none", border: "1px solid #DEE2E6", borderRadius: 3, color: "#868E96", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace" }}>
+                  Export PNG
+                </button>
+              </Tooltip>
             )}
             {tutorialStep === -1 && (
-              <button
-                title="Replay tutorial"
-                onClick={() => {
-                  localStorage.removeItem("deeproot-tutorial-completed");
-                  window.location.hash = "";
-                  window.location.reload();
-                }}
-                style={{ fontSize: 13, padding: "4px 8px", background: "none", border: "1px solid #DEE2E6", borderRadius: 3, color: "#ADB5BD", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace" }}>
-                ?
-              </button>
+              <Tooltip label="Replay tutorial" align="right">
+                <button
+                  onClick={() => {
+                    localStorage.removeItem("deeproot-tutorial-completed");
+                    window.location.hash = "";
+                    window.location.reload();
+                  }}
+                  style={{ fontSize: 13, padding: "4px 8px", background: "none", border: "1px solid #DEE2E6", borderRadius: 3, color: "#ADB5BD", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace" }}>
+                  ?
+                </button>
+              </Tooltip>
             )}
           </div>
         </div>
