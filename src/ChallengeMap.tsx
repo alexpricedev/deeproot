@@ -1335,6 +1335,7 @@ export default function ChallengeMap() {
                 setEdges([]);
                 setTutorialRevealed(new Set());
                 setSelectedId(null);
+                setPan({ x: 0, y: 0 });
                 setTutorialStep(-1);
               }}
               style={{
