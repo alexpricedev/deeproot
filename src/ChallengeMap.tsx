@@ -457,17 +457,23 @@ function TutorialTooltip({
   positions,
   panOffset,
   children,
+  placement = "right",
 }: {
   targetNodeId: string;
   positions: Record<string, Position>;
   panOffset: { x: number; y: number };
   children: React.ReactNode;
+  placement?: "right" | "below";
 }) {
   const pos = positions[targetNodeId];
   if (!pos) return null;
 
-  const left = pos.x + NODE_W + 16 + panOffset.x;
-  const top = pos.y + panOffset.y + 50; // 50px header offset
+  const left = placement === "below"
+    ? pos.x + panOffset.x
+    : pos.x + NODE_W + 16 + panOffset.x;
+  const top = placement === "below"
+    ? pos.y + NODE_H + 16 + panOffset.y + 50
+    : pos.y + panOffset.y + 50; // 50px header offset
 
   return (
     <div
@@ -1175,6 +1181,7 @@ export default function ChallengeMap() {
                 targetNodeId="tutorial-constraint-1"
                 positions={positions}
                 panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
+                placement="below"
               >
                 <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>Those are constraints.</h4>
                 <p style={{ margin: "0 0 14px 0", fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
