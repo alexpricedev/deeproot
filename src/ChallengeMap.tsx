@@ -761,60 +761,60 @@ export default function ChallengeMap() {
         setNodes((prev) => [...prev, { id: "tutorial-constraint-1", label: "No high-altitude experience", type: "constraint", status: "open", notes: "" }]);
         setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-constraint-1" }]);
         setTutorialRevealed((prev) => new Set(prev).add("constraint"));
-        // Second constraint — auto-appears after 500ms
-        tutorialTimers.current.push(setTimeout(() => {
-          setNodes((prev) => [...prev, { id: "tutorial-constraint-2", label: "Budget: $3,000\u20135,000", type: "constraint", status: "open", notes: "" }]);
-          setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-constraint-2" }]);
-          setTutorialRevealed((prev) => new Set(prev).add("constraint-2"));
-        }, 500));
       } else if (tutorialStep === 4 && !tutorialRevealed.has("consideration")) {
         setNodes((prev) => [...prev, { id: "tutorial-consideration", label: "Best summit window: Jan\u2013Mar", type: "consideration", status: "open", notes: "" }]);
         setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-consideration" }]);
         setTutorialRevealed((prev) => new Set(prev).add("consideration"));
       } else if (tutorialStep === 5 && !tutorialRevealed.has("action")) {
-        // Branch 1: "No high-altitude experience" actions
-        setNodes((prev) => [...prev, { id: "tutorial-action-1", label: "Train cardio 3x/week for 3 months", type: "action", status: "open", notes: "" }]);
-        setEdges((prev) => [...prev, { from: "tutorial-constraint-1", to: "tutorial-action-1" }]);
+        // First: add budget constraint (wasn't shown in step 3)
+        setNodes((prev) => [...prev, { id: "tutorial-constraint-2", label: "Budget: $3,000\u20135,000", type: "constraint", status: "open", notes: "" }]);
+        setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-constraint-2" }]);
         setTutorialRevealed((prev) => new Set(prev).add("action"));
+
+        // Branch 1: "No high-altitude experience" actions
+        tutorialTimers.current.push(setTimeout(() => {
+          setNodes((prev) => [...prev, { id: "tutorial-action-1", label: "Train cardio 3x/week for 3 months", type: "action", status: "open", notes: "" }]);
+          setEdges((prev) => [...prev, { from: "tutorial-constraint-1", to: "tutorial-action-1" }]);
+        }, 300));
 
         tutorialTimers.current.push(setTimeout(() => {
           setNodes((prev) => [...prev, { id: "tutorial-action-2", label: "Do a practice hike at 10,000ft+", type: "action", status: "open", notes: "" }]);
           setEdges((prev) => [...prev, { from: "tutorial-constraint-1", to: "tutorial-action-2" }]);
-        }, 300));
+        }, 600));
 
         // Branch 2: "Budget" actions
         tutorialTimers.current.push(setTimeout(() => {
           setNodes((prev) => [...prev, { id: "tutorial-action-3", label: "Save $500/month into a trip fund", type: "action", status: "open", notes: "" }]);
           setEdges((prev) => [...prev, { from: "tutorial-constraint-2", to: "tutorial-action-3" }]);
-        }, 600));
+        }, 900));
 
         tutorialTimers.current.push(setTimeout(() => {
           setNodes((prev) => [...prev, { id: "tutorial-action-4", label: "Book a licensed guide company", type: "action", status: "open", notes: "" }]);
           setEdges((prev) => [...prev, { from: "tutorial-constraint-2", to: "tutorial-action-4" }]);
-        }, 900));
+        }, 1200));
 
         tutorialTimers.current.push(setTimeout(() => {
           setNodes((prev) => [...prev, { id: "tutorial-action-5", label: "Buy cold-weather gear & layers", type: "action", status: "open", notes: "" }]);
           setEdges((prev) => [...prev, { from: "tutorial-constraint-2", to: "tutorial-action-5" }]);
-        }, 1200));
+        }, 1500));
 
         tutorialTimers.current.push(setTimeout(() => {
           setNodes((prev) => [...prev, { id: "tutorial-action-6", label: "Get travel insurance with evacuation", type: "action", status: "open", notes: "" }]);
           setEdges((prev) => [...prev, { from: "tutorial-constraint-2", to: "tutorial-action-6" }]);
-        }, 1500));
+        }, 1800));
 
         // Branch 3: "Summit window" actions
         tutorialTimers.current.push(setTimeout(() => {
           setNodes((prev) => [...prev, { id: "tutorial-action-7", label: "Book flights for February", type: "action", status: "open", notes: "" }]);
           setEdges((prev) => [...prev, { from: "tutorial-consideration", to: "tutorial-action-7" }]);
-        }, 1800));
+        }, 2100));
 
         tutorialTimers.current.push(setTimeout(() => {
           setNodes((prev) => [...prev, { id: "tutorial-action-8", label: "Request 2 weeks off work", type: "action", status: "open", notes: "" }]);
           setEdges((prev) => [...prev, { from: "tutorial-consideration", to: "tutorial-action-8" }]);
           // Advance to step 6 after last action
           tutorialTimers.current.push(setTimeout(() => setTutorialStep(6), 600));
-        }, 2100));
+        }, 2400));
       }
       return;
     }
@@ -1181,14 +1181,13 @@ export default function ChallengeMap() {
                 targetNodeId="tutorial-constraint-1"
                 positions={positions}
                 panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
-                placement="below"
+                placement="right"
               >
-                <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>Those are constraints.</h4>
+                <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>That's a constraint.</h4>
                 <p style={{ margin: "0 0 14px 0", fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
-                  They block your goal until you deal with them.
+                  It blocks your goal until you deal with it.
                 </p>
-                {tutorialRevealed.has("constraint-2") && (
-                  <button
+                <button
                     onClick={() => setTutorialStep(4)}
                     style={{
                       fontSize: 13, fontWeight: 600, padding: "8px 18px",
@@ -1198,7 +1197,6 @@ export default function ChallengeMap() {
                   >
                     {"Continue \u2192"}
                   </button>
-                )}
               </TutorialTooltip>
             )}
           </>
