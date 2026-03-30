@@ -1334,6 +1334,9 @@ export default function ChallengeMap() {
             })}
           </div>
         )}
+        <a href="https://alexprice.dev" target="_blank" rel="noopener noreferrer" style={{ marginTop: "auto", display: "block", padding: "12px 16px", borderTop: "1px solid #E9ECEF", textAlign: "center", fontSize: 11, color: "#868E96", fontFamily: "'JetBrains Mono', monospace", textDecoration: "none", cursor: "pointer" }}>
+          Made by <span style={{ color: "#868E96", fontWeight: 500 }}>Alex Price</span>
+        </a>
       </div>}
       {saveModalUrl && <SaveModal url={saveModalUrl} onClose={() => setSaveModalUrl(null)} />}
     </div>
