@@ -253,7 +253,7 @@ function NodeCard({
 }
 
 
-function EditPanel({ node, onUpdate, onDelete, onAddChild, onClose, autoFocusLabel }: { node: MapNode; onUpdate: (n: MapNode) => void; onDelete: (id: string) => void; onAddChild: (id: string) => void; onClose: () => void; autoFocusLabel?: boolean }) {
+function EditPanel({ node, onUpdate, onDelete, onAddChild, onClose, autoFocusLabel, isGoal }: { node: MapNode; onUpdate: (n: MapNode) => void; onDelete: (id: string) => void; onAddChild: (id: string) => void; onClose: () => void; autoFocusLabel?: boolean; isGoal?: boolean }) {
   const labelRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -276,7 +276,7 @@ function EditPanel({ node, onUpdate, onDelete, onAddChild, onClose, autoFocusLab
 
       <label style={{ fontSize: 10, color: "#868E96", display: "block", marginBottom: 4 }}>Type</label>
       <div style={{ display: "flex", gap: 4, marginBottom: 12, flexWrap: "wrap" }}>
-        {Object.entries(NODE_TYPES).map(([key, val]) => (
+        {Object.entries(NODE_TYPES).filter(([key]) => isGoal ? key === "goal" : key !== "goal").map(([key, val]) => (
           <button key={key} onClick={() => onUpdate({ ...node, type: key as MapNode["type"] })}
             style={{ fontSize: 10, padding: "4px 10px", background: node.type === key ? val.bg : "#fff", border: `1px solid ${node.type === key ? val.border : "#DEE2E6"}`, borderRadius: 3, color: node.type === key ? val.color : "#868E96", cursor: "pointer", fontWeight: node.type === key ? 600 : 400, fontFamily: "inherit" }}>
             {val.label}
@@ -304,10 +304,10 @@ function EditPanel({ node, onUpdate, onDelete, onAddChild, onClose, autoFocusLab
           style={{ fontSize: 10, padding: "6px 12px", background: "#F8F9FA", border: "1px solid #ADB5BD", borderRadius: 4, color: "#495057", cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>
           + Dep
         </button>
-        <button onClick={() => onDelete(node.id)}
+        {!isGoal && <button onClick={() => onDelete(node.id)}
           style={{ fontSize: 10, padding: "6px 12px", background: "none", border: "1px solid #E03131", borderRadius: 4, color: "#E03131", cursor: "pointer", fontFamily: "inherit" }}>
           Delete node
-        </button>
+        </button>}
       </div>
     </div>
   );
@@ -793,7 +793,7 @@ export default function ChallengeMap() {
         setSelectedId(null);
       }
       if (inInput) return;
-      if ((e.key === "Delete" || e.key === "Backspace") && selectedId) {
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedId && selectedId !== nodes.find(n => n.type === "goal")?.id) {
         e.preventDefault();
         deleteNode(selectedId);
       } else if (e.key === "Enter" && selectedId) {
@@ -1302,7 +1302,7 @@ export default function ChallengeMap() {
 
         {sidebarTab === "edit" ? (
           selectedNode ? (
-            <EditPanel node={selectedNode} onUpdate={updateNode} onDelete={deleteNode} onAddChild={addChild} onClose={() => setSelectedId(null)} autoFocusLabel={selectedNode.id === newNodeId.current} />
+            <EditPanel node={selectedNode} onUpdate={updateNode} onDelete={deleteNode} onAddChild={addChild} onClose={() => setSelectedId(null)} autoFocusLabel={selectedNode.id === newNodeId.current} isGoal={selectedNode.id === nodes.find(n => n.type === "goal")?.id} />
           ) : (
             <div style={{ padding: 16, fontSize: 11, color: "#ADB5BD", textAlign: "center", marginTop: 40 }}>Select a node to edit</div>
           )
