@@ -745,6 +745,55 @@ export default function ChallengeMap() {
   const tutorialTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => () => tutorialTimers.current.forEach(clearTimeout), []);
 
+  // Step 6: auto-bloom cascade
+  useEffect(() => {
+    if (tutorialStep !== 6) return;
+
+    // Add budget constraint
+    setNodes((prev) => [...prev, { id: "tutorial-constraint-2", label: "Budget: $3,000\u20135,000", type: "constraint", status: "open", notes: "" }]);
+    setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-constraint-2" }]);
+
+    // Branch 1: second action under constraint-1
+    tutorialTimers.current.push(setTimeout(() => {
+      setNodes((prev) => [...prev, { id: "tutorial-action-2", label: "Do a practice hike at 10,000ft+", type: "action", status: "open", notes: "" }]);
+      setEdges((prev) => [...prev, { from: "tutorial-constraint-1", to: "tutorial-action-2" }]);
+    }, 300));
+
+    // Branch 2: "Budget" actions
+    tutorialTimers.current.push(setTimeout(() => {
+      setNodes((prev) => [...prev, { id: "tutorial-action-3", label: "Save $500/month into a trip fund", type: "action", status: "open", notes: "" }]);
+      setEdges((prev) => [...prev, { from: "tutorial-constraint-2", to: "tutorial-action-3" }]);
+    }, 600));
+
+    tutorialTimers.current.push(setTimeout(() => {
+      setNodes((prev) => [...prev, { id: "tutorial-action-4", label: "Book a licensed guide company", type: "action", status: "open", notes: "" }]);
+      setEdges((prev) => [...prev, { from: "tutorial-constraint-2", to: "tutorial-action-4" }]);
+    }, 900));
+
+    tutorialTimers.current.push(setTimeout(() => {
+      setNodes((prev) => [...prev, { id: "tutorial-action-5", label: "Buy cold-weather gear & layers", type: "action", status: "open", notes: "" }]);
+      setEdges((prev) => [...prev, { from: "tutorial-constraint-2", to: "tutorial-action-5" }]);
+    }, 1200));
+
+    tutorialTimers.current.push(setTimeout(() => {
+      setNodes((prev) => [...prev, { id: "tutorial-action-6", label: "Get travel insurance with evacuation", type: "action", status: "open", notes: "" }]);
+      setEdges((prev) => [...prev, { from: "tutorial-constraint-2", to: "tutorial-action-6" }]);
+    }, 1500));
+
+    // Branch 3: "Summit window" actions
+    tutorialTimers.current.push(setTimeout(() => {
+      setNodes((prev) => [...prev, { id: "tutorial-action-7", label: "Book flights for February", type: "action", status: "open", notes: "" }]);
+      setEdges((prev) => [...prev, { from: "tutorial-consideration", to: "tutorial-action-7" }]);
+    }, 1800));
+
+    tutorialTimers.current.push(setTimeout(() => {
+      setNodes((prev) => [...prev, { id: "tutorial-action-8", label: "Request 2 weeks off work", type: "action", status: "open", notes: "" }]);
+      setEdges((prev) => [...prev, { from: "tutorial-consideration", to: "tutorial-action-8" }]);
+      // Advance to completion after last action
+      tutorialTimers.current.push(setTimeout(() => setTutorialStep(7), 600));
+    }, 2100));
+  }, [tutorialStep]);
+
   const addChild = useCallback((parentId: string) => {
     const newId = generateId();
     newNodeId.current = newId;
@@ -755,7 +804,7 @@ export default function ChallengeMap() {
   }, []);
 
   const handleAddChild = useCallback((parentId: string) => {
-    if (parentId === "tutorial-goal" && tutorialStep >= 3 && tutorialStep <= 5) {
+    if (parentId === "tutorial-goal" && tutorialStep >= 3 && tutorialStep <= 4) {
       if (tutorialStep === 3 && !tutorialRevealed.has("constraint")) {
         // First constraint — created by user click
         setNodes((prev) => [...prev, { id: "tutorial-constraint-1", label: "No high-altitude experience", type: "constraint", status: "open", notes: "" }]);
@@ -765,57 +814,14 @@ export default function ChallengeMap() {
         setNodes((prev) => [...prev, { id: "tutorial-consideration", label: "Best summit window: Jan\u2013Mar", type: "consideration", status: "open", notes: "" }]);
         setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-consideration" }]);
         setTutorialRevealed((prev) => new Set(prev).add("consideration"));
-      } else if (tutorialStep === 5 && !tutorialRevealed.has("action")) {
-        // First: add budget constraint (wasn't shown in step 3)
-        setNodes((prev) => [...prev, { id: "tutorial-constraint-2", label: "Budget: $3,000\u20135,000", type: "constraint", status: "open", notes: "" }]);
-        setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-constraint-2" }]);
-        setTutorialRevealed((prev) => new Set(prev).add("action"));
-
-        // Branch 1: "No high-altitude experience" actions
-        tutorialTimers.current.push(setTimeout(() => {
-          setNodes((prev) => [...prev, { id: "tutorial-action-1", label: "Train cardio 3x/week for 3 months", type: "action", status: "open", notes: "" }]);
-          setEdges((prev) => [...prev, { from: "tutorial-constraint-1", to: "tutorial-action-1" }]);
-        }, 300));
-
-        tutorialTimers.current.push(setTimeout(() => {
-          setNodes((prev) => [...prev, { id: "tutorial-action-2", label: "Do a practice hike at 10,000ft+", type: "action", status: "open", notes: "" }]);
-          setEdges((prev) => [...prev, { from: "tutorial-constraint-1", to: "tutorial-action-2" }]);
-        }, 600));
-
-        // Branch 2: "Budget" actions
-        tutorialTimers.current.push(setTimeout(() => {
-          setNodes((prev) => [...prev, { id: "tutorial-action-3", label: "Save $500/month into a trip fund", type: "action", status: "open", notes: "" }]);
-          setEdges((prev) => [...prev, { from: "tutorial-constraint-2", to: "tutorial-action-3" }]);
-        }, 900));
-
-        tutorialTimers.current.push(setTimeout(() => {
-          setNodes((prev) => [...prev, { id: "tutorial-action-4", label: "Book a licensed guide company", type: "action", status: "open", notes: "" }]);
-          setEdges((prev) => [...prev, { from: "tutorial-constraint-2", to: "tutorial-action-4" }]);
-        }, 1200));
-
-        tutorialTimers.current.push(setTimeout(() => {
-          setNodes((prev) => [...prev, { id: "tutorial-action-5", label: "Buy cold-weather gear & layers", type: "action", status: "open", notes: "" }]);
-          setEdges((prev) => [...prev, { from: "tutorial-constraint-2", to: "tutorial-action-5" }]);
-        }, 1500));
-
-        tutorialTimers.current.push(setTimeout(() => {
-          setNodes((prev) => [...prev, { id: "tutorial-action-6", label: "Get travel insurance with evacuation", type: "action", status: "open", notes: "" }]);
-          setEdges((prev) => [...prev, { from: "tutorial-constraint-2", to: "tutorial-action-6" }]);
-        }, 1800));
-
-        // Branch 3: "Summit window" actions
-        tutorialTimers.current.push(setTimeout(() => {
-          setNodes((prev) => [...prev, { id: "tutorial-action-7", label: "Book flights for February", type: "action", status: "open", notes: "" }]);
-          setEdges((prev) => [...prev, { from: "tutorial-consideration", to: "tutorial-action-7" }]);
-        }, 2100));
-
-        tutorialTimers.current.push(setTimeout(() => {
-          setNodes((prev) => [...prev, { id: "tutorial-action-8", label: "Request 2 weeks off work", type: "action", status: "open", notes: "" }]);
-          setEdges((prev) => [...prev, { from: "tutorial-consideration", to: "tutorial-action-8" }]);
-          // Advance to step 6 after last action
-          tutorialTimers.current.push(setTimeout(() => setTutorialStep(6), 600));
-        }, 2400));
       }
+      return;
+    }
+    // Step 5: single action under constraint-1
+    if (parentId === "tutorial-constraint-1" && tutorialStep === 5 && !tutorialRevealed.has("action")) {
+      setNodes((prev) => [...prev, { id: "tutorial-action-1", label: "Train cardio 3x/week for 3 months", type: "action", status: "open", notes: "" }]);
+      setEdges((prev) => [...prev, { from: "tutorial-constraint-1", to: "tutorial-action-1" }]);
+      setTutorialRevealed((prev) => new Set(prev).add("action"));
       return;
     }
     addChild(parentId);
@@ -843,7 +849,7 @@ export default function ChallengeMap() {
     const handleKeyDown = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
       const inInput = tag === "INPUT" || tag === "TEXTAREA";
-      if (tutorialStep >= 1 && tutorialStep <= 6) return;
+      if (tutorialStep >= 1 && tutorialStep <= 7) return;
 
       if (e.key === "Escape") {
         if (inInput) {
@@ -1027,7 +1033,7 @@ export default function ChallengeMap() {
           </svg>
           {nodes.map((node) =>
             positions[node.id] ? (
-              <NodeCard key={node.id} node={node} pos={positions[node.id]} onSelect={setSelectedId} isSelected={selectedId === node.id} onAddChild={handleAddChild} childCount={getChildCount(node.id)} hideDep={tutorialStep >= 1 && tutorialStep <= 6 && !(node.id === "tutorial-goal" && tutorialStep >= 3 && tutorialStep <= 5 && !tutorialRevealed.has(tutorialStep === 3 ? "constraint" : tutorialStep === 4 ? "consideration" : "action"))} />
+              <NodeCard key={node.id} node={node} pos={positions[node.id]} onSelect={setSelectedId} isSelected={selectedId === node.id} onAddChild={handleAddChild} childCount={getChildCount(node.id)} hideDep={tutorialStep >= 1 && tutorialStep <= 7 && !((node.id === "tutorial-goal" && tutorialStep >= 3 && tutorialStep <= 4 && !tutorialRevealed.has(tutorialStep === 3 ? "constraint" : "consideration")) || (node.id === "tutorial-constraint-1" && tutorialStep === 5 && !tutorialRevealed.has("action")))} />
             ) : null
           )}
         </div>
@@ -1241,37 +1247,61 @@ export default function ChallengeMap() {
           </>
         )}
 
-        {/* Tutorial Stage 5: The Actions */}
+        {/* Tutorial Stage 5: First Action */}
         {tutorialStep === 5 && (
           <>
             {!tutorialRevealed.has("action") && (
               <TutorialTooltip
-                targetNodeId="tutorial-goal"
+                targetNodeId="tutorial-constraint-1"
                 positions={positions}
                 panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
               >
                 <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>What will you actually do?</h4>
                 <p style={{ margin: 0, fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
-                  Actions are concrete steps. Click <strong style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>+ dep</strong> one more time.
+                  Actions are concrete steps. Click <strong style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>+ dep</strong> on this constraint.
                 </p>
               </TutorialTooltip>
             )}
             {tutorialRevealed.has("action") && (
               <TutorialTooltip
-                targetNodeId="tutorial-goal"
+                targetNodeId="tutorial-action-1"
                 positions={positions}
                 panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
               >
-                <p style={{ margin: 0, fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
-                  Watch the map come alive...
+                <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>That's an action.</h4>
+                <p style={{ margin: "0 0 14px 0", fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
+                  Concrete steps that address your constraints and considerations. Now watch what happens when we fill in the rest.
                 </p>
+                <button
+                  onClick={() => setTutorialStep(6)}
+                  style={{
+                    fontSize: 13, fontWeight: 600, padding: "8px 18px",
+                    background: "#E8590C", color: "#fff",
+                    border: "none", borderRadius: 6, cursor: "pointer",
+                  }}
+                >
+                  {"Continue \u2192"}
+                </button>
               </TutorialTooltip>
             )}
           </>
         )}
 
-        {/* Tutorial Stage 6: Completion */}
+        {/* Tutorial Stage 6: Bloom */}
         {tutorialStep === 6 && (
+          <TutorialTooltip
+            targetNodeId="tutorial-goal"
+            positions={positions}
+            panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
+          >
+            <p style={{ margin: 0, fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
+              Watch the map come alive...
+            </p>
+          </TutorialTooltip>
+        )}
+
+        {/* Tutorial Stage 7: Completion */}
+        {tutorialStep === 7 && (
           <div
             style={{
               position: "absolute",
