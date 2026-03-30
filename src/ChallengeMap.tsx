@@ -676,6 +676,22 @@ export default function ChallengeMap() {
       }
     }
   }, [pan, positions, nodes, tutorialStep]);
+
+  // Auto-pan to fit tree during tutorial bloom (step 5+)
+  useEffect(() => {
+    if (tutorialStep >= 5 && nodes.length > 4 && canvasRef.current) {
+      const allPositions = Object.values(positions);
+      if (allPositions.length > 0) {
+        const minX = Math.min(...allPositions.map(p => p.x));
+        const maxX = Math.max(...allPositions.map(p => p.x)) + NODE_W;
+        const treeWidth = maxX - minX;
+        const canvasWidth = canvasRef.current.clientWidth;
+        const centerX = (canvasWidth - treeWidth) / 2 - minX;
+        setPan(prev => ({ x: centerX, y: prev?.y ?? 0 }));
+      }
+    }
+  }, [tutorialStep, nodes.length, positions]);
+
   const selectedNode = nodes.find((n) => n.id === selectedId);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
@@ -735,26 +751,64 @@ export default function ChallengeMap() {
   const handleAddChild = useCallback((parentId: string) => {
     if (parentId === "tutorial-goal" && tutorialStep >= 3 && tutorialStep <= 5) {
       if (tutorialStep === 3 && !tutorialRevealed.has("constraint")) {
-        setNodes((prev) => [...prev, { id: "tutorial-constraint", label: "No cold weather gear", type: "constraint", status: "open", notes: "" }]);
-        setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-constraint" }]);
+        // First constraint — created by user click
+        setNodes((prev) => [...prev, { id: "tutorial-constraint-1", label: "No high-altitude experience", type: "constraint", status: "open", notes: "" }]);
+        setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-constraint-1" }]);
         setTutorialRevealed((prev) => new Set(prev).add("constraint"));
+        // Second constraint — auto-appears after 500ms
+        tutorialTimers.current.push(setTimeout(() => {
+          setNodes((prev) => [...prev, { id: "tutorial-constraint-2", label: "Budget: $3,000\u20135,000", type: "constraint", status: "open", notes: "" }]);
+          setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-constraint-2" }]);
+          setTutorialRevealed((prev) => new Set(prev).add("constraint-2"));
+        }, 500));
       } else if (tutorialStep === 4 && !tutorialRevealed.has("consideration")) {
-        setNodes((prev) => [...prev, { id: "tutorial-consideration", label: "Best season: July-Sept", type: "consideration", status: "open", notes: "" }]);
+        setNodes((prev) => [...prev, { id: "tutorial-consideration", label: "Best summit window: Jan\u2013Mar", type: "consideration", status: "open", notes: "" }]);
         setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-consideration" }]);
         setTutorialRevealed((prev) => new Set(prev).add("consideration"));
       } else if (tutorialStep === 5 && !tutorialRevealed.has("action")) {
-        setNodes((prev) => [...prev, { id: "tutorial-action-1", label: "Book a guide service", type: "action", status: "open", notes: "" }]);
-        setEdges((prev) => [...prev, { from: "tutorial-goal", to: "tutorial-action-1" }]);
+        // Branch 1: "No high-altitude experience" actions
+        setNodes((prev) => [...prev, { id: "tutorial-action-1", label: "Train cardio 3x/week for 3 months", type: "action", status: "open", notes: "" }]);
+        setEdges((prev) => [...prev, { from: "tutorial-constraint-1", to: "tutorial-action-1" }]);
         setTutorialRevealed((prev) => new Set(prev).add("action"));
+
         tutorialTimers.current.push(setTimeout(() => {
-          setNodes((prev) => [...prev, { id: "tutorial-action-2", label: "Rent gear from REI", type: "action", status: "open", notes: "" }]);
-          setEdges((prev) => [...prev, { from: "tutorial-constraint", to: "tutorial-action-2" }]);
-        }, 400));
+          setNodes((prev) => [...prev, { id: "tutorial-action-2", label: "Do a practice hike at 10,000ft+", type: "action", status: "open", notes: "" }]);
+          setEdges((prev) => [...prev, { from: "tutorial-constraint-1", to: "tutorial-action-2" }]);
+        }, 300));
+
+        // Branch 2: "Budget" actions
         tutorialTimers.current.push(setTimeout(() => {
-          setNodes((prev) => [...prev, { id: "tutorial-action-3", label: "Plan for August trip", type: "action", status: "open", notes: "" }]);
-          setEdges((prev) => [...prev, { from: "tutorial-consideration", to: "tutorial-action-3" }]);
+          setNodes((prev) => [...prev, { id: "tutorial-action-3", label: "Save $500/month into a trip fund", type: "action", status: "open", notes: "" }]);
+          setEdges((prev) => [...prev, { from: "tutorial-constraint-2", to: "tutorial-action-3" }]);
+        }, 600));
+
+        tutorialTimers.current.push(setTimeout(() => {
+          setNodes((prev) => [...prev, { id: "tutorial-action-4", label: "Book a licensed guide company", type: "action", status: "open", notes: "" }]);
+          setEdges((prev) => [...prev, { from: "tutorial-constraint-2", to: "tutorial-action-4" }]);
+        }, 900));
+
+        tutorialTimers.current.push(setTimeout(() => {
+          setNodes((prev) => [...prev, { id: "tutorial-action-5", label: "Buy cold-weather gear & layers", type: "action", status: "open", notes: "" }]);
+          setEdges((prev) => [...prev, { from: "tutorial-constraint-2", to: "tutorial-action-5" }]);
+        }, 1200));
+
+        tutorialTimers.current.push(setTimeout(() => {
+          setNodes((prev) => [...prev, { id: "tutorial-action-6", label: "Get travel insurance with evacuation", type: "action", status: "open", notes: "" }]);
+          setEdges((prev) => [...prev, { from: "tutorial-constraint-2", to: "tutorial-action-6" }]);
+        }, 1500));
+
+        // Branch 3: "Summit window" actions
+        tutorialTimers.current.push(setTimeout(() => {
+          setNodes((prev) => [...prev, { id: "tutorial-action-7", label: "Book flights for February", type: "action", status: "open", notes: "" }]);
+          setEdges((prev) => [...prev, { from: "tutorial-consideration", to: "tutorial-action-7" }]);
+        }, 1800));
+
+        tutorialTimers.current.push(setTimeout(() => {
+          setNodes((prev) => [...prev, { id: "tutorial-action-8", label: "Request 2 weeks off work", type: "action", status: "open", notes: "" }]);
+          setEdges((prev) => [...prev, { from: "tutorial-consideration", to: "tutorial-action-8" }]);
+          // Advance to step 6 after last action
           tutorialTimers.current.push(setTimeout(() => setTutorialStep(6), 600));
-        }, 800));
+        }, 2100));
       }
       return;
     }
@@ -1062,7 +1116,7 @@ export default function ChallengeMap() {
             onStart={() => {
               const goalNode: MapNode = {
                 id: "tutorial-goal",
-                label: "Climb Mount Rainier",
+                label: "Summit Mount Kilimanjaro",
                 type: "goal",
                 status: "open",
                 notes: "",
@@ -1118,24 +1172,26 @@ export default function ChallengeMap() {
             )}
             {tutorialRevealed.has("constraint") && (
               <TutorialTooltip
-                targetNodeId="tutorial-constraint"
+                targetNodeId="tutorial-constraint-1"
                 positions={positions}
                 panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
               >
-                <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>{"That\u2019s a constraint."}</h4>
+                <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>Those are constraints.</h4>
                 <p style={{ margin: "0 0 14px 0", fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
-                  It blocks your goal until you deal with it.
+                  They block your goal until you deal with them.
                 </p>
-                <button
-                  onClick={() => setTutorialStep(4)}
-                  style={{
-                    fontSize: 13, fontWeight: 600, padding: "8px 18px",
-                    background: "#2F9E44", color: "#fff",
-                    border: "none", borderRadius: 6, cursor: "pointer",
-                  }}
-                >
-                  {"Continue \u2192"}
-                </button>
+                {tutorialRevealed.has("constraint-2") && (
+                  <button
+                    onClick={() => setTutorialStep(4)}
+                    style={{
+                      fontSize: 13, fontWeight: 600, padding: "8px 18px",
+                      background: "#2F9E44", color: "#fff",
+                      border: "none", borderRadius: 6, cursor: "pointer",
+                    }}
+                  >
+                    {"Continue \u2192"}
+                  </button>
+                )}
               </TutorialTooltip>
             )}
           </>
@@ -1202,7 +1258,7 @@ export default function ChallengeMap() {
                 panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
               >
                 <p style={{ margin: 0, fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
-                  Watch the map come together...
+                  Watch the map come alive...
                 </p>
               </TutorialTooltip>
             )}
@@ -1230,7 +1286,7 @@ export default function ChallengeMap() {
               You just decomposed a goal.
             </h4>
             <p style={{ margin: "0 0 20px 0", fontSize: 13, color: "#495057", lineHeight: 1.6 }}>
-              {"Constraints, considerations, and actions \u2014 that\u2019s the whole system. Now try it with something you actually care about."}
+              {"Constraints, considerations, and actions \u2014 that\u2019s the whole system. One goal became 12 nodes across three branches. Now try it with something you actually care about."}
             </p>
             <p style={{ margin: "0 0 20px 0", fontSize: 13, color: "#495057", lineHeight: 1.6 }}>
               When you're ready, hit <strong>Save</strong> to get a unique link for your map.
