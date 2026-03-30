@@ -55,8 +55,8 @@ interface Position {
 const NODE_TYPES: Record<string, NodeType> = {
   goal: { label: "Goal", color: "#E8590C", bg: "#FFF4E6", border: "#E8590C" },
   constraint: { label: "Constraint", color: "#1971C2", bg: "#E7F5FF", border: "#1971C2" },
-  consideration: { label: "Consideration", color: "#2F9E44", bg: "#EBFBEE", border: "#2F9E44" },
-  action: { label: "Action", color: "#7048E8", bg: "#F3F0FF", border: "#7048E8" },
+  consideration: { label: "Consideration", color: "#7048E8", bg: "#F3F0FF", border: "#7048E8" },
+  action: { label: "Action", color: "#2F9E44", bg: "#EBFBEE", border: "#2F9E44" },
 };
 
 const STATUS: Record<string, StatusType> = {
@@ -188,6 +188,11 @@ function NodeCard({
   const statusStyle = STATUS[node.status];
   const isTutorialNode = node.id.startsWith("tutorial-");
 
+  // Status-driven texture treatments (shared by ALL node types)
+  // Color = type identity (never changes). Texture = status.
+  const isDone = node.status === "done" || node.status === "clear";
+  const isBlocked = node.status === "blocked";
+
   return (
     <div
       className={isTutorialNode ? "tutorial-node-enter" : undefined}
@@ -201,16 +206,19 @@ function NodeCard({
         top: pos.y,
         width: NODE_W,
         minHeight: NODE_H - 20,
-        background: typeStyle.bg,
-        border: `1.5px solid ${isSelected ? typeStyle.border : "#DEE2E6"}`,
+        background: isBlocked
+          ? `repeating-linear-gradient(-45deg, ${typeStyle.bg}, ${typeStyle.bg} 6px, ${typeStyle.border}11 6px, ${typeStyle.border}11 8px)`
+          : typeStyle.bg,
+        border: `1.5px ${isDone ? "dashed" : "solid"} ${isSelected ? typeStyle.border : isDone ? typeStyle.border : "#DEE2E6"}`,
         borderRadius: 6,
         padding: "10px 12px",
         cursor: "pointer",
         userSelect: "none",
+        opacity: isDone ? 0.7 : 1,
         boxShadow: isSelected
           ? `0 0 0 2px ${typeStyle.border}33`
           : "0 1px 3px rgba(0,0,0,0.06)",
-        transition: "box-shadow 0.2s, border-color 0.2s, background 0.2s",
+        transition: "box-shadow 0.2s, border-color 0.2s, background 0.2s, opacity 0.2s",
         zIndex: isSelected ? 10 : 1,
         fontFamily: "'JetBrains Mono', 'SF Mono', 'Fira Code', monospace",
         boxSizing: "border-box",
@@ -220,12 +228,12 @@ function NodeCard({
         <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: typeStyle.color }}>
           {typeStyle.label}
         </span>
-        <span style={{ fontSize: 10, color: statusStyle.color, display: "flex", alignItems: "center", gap: 3 }}>
-          <span style={{ fontSize: 8 }}>{statusStyle.icon}</span>
+        <span style={{ fontSize: 10, color: isDone ? typeStyle.color : statusStyle.color, display: "flex", alignItems: "center", gap: 3 }}>
+          {isDone ? <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg> : <span style={{ fontSize: 8 }}>{statusStyle.icon}</span>}
           {statusStyle.label}
         </span>
       </div>
-      <div style={{ fontSize: 12, lineHeight: 1.4, color: "#212529", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", wordBreak: "break-word" }}>
+      <div style={{ fontSize: 12, lineHeight: 1.4, color: isDone ? "#868E96" : "#212529", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", wordBreak: "break-word" }}>
         {node.label}
       </div>
       {node.notes && (
@@ -899,7 +907,7 @@ export default function ChallengeMap() {
       <style>{`@media (max-width: 768px) { .small-screen-overlay { display: flex !important; } }`}</style>
 
       <div ref={canvasRef} onMouseDown={handleCanvasMouseDown}
-        style={{ flex: 1, position: "relative", overflow: "hidden", cursor: isPanning ? "grabbing" : "default", backgroundImage: "radial-gradient(circle, #DEE2E6 0.8px, transparent 0.8px)", backgroundSize: "24px 24px" }}>
+        style={{ flex: 1, position: "relative", overflow: "hidden", cursor: isPanning ? "grabbing" : "default", backgroundImage: "linear-gradient(to right, #E9ECEF 0.5px, transparent 0.5px), linear-gradient(to bottom, #E9ECEF 0.5px, transparent 0.5px)", backgroundSize: "24px 24px", backgroundPosition: `${pan?.x ?? 0}px ${pan?.y ?? 0}px` }}>
 
         {/* Header */}
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: "12px 16px", background: "rgba(248,249,250,0.92)", backdropFilter: "blur(8px)", borderBottom: "1px solid #E9ECEF", display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 20 }}>
@@ -1326,7 +1334,7 @@ export default function ChallengeMap() {
                 style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "8px", marginBottom: 4, borderRadius: 4, background: isComplete ? "#F8F9FA" : NODE_TYPES.action.bg, border: `1px solid ${selectedId === n.id ? NODE_TYPES.action.border : "transparent"}`, cursor: "pointer", transition: "border-color 0.2s", opacity: isComplete ? 0.55 : 1 }}>
                 <span style={{ fontSize: 10, color: STATUS[n.status].color, flexShrink: 0, marginTop: 1 }}>{STATUS[n.status].icon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12, color: isComplete ? "#868E96" : "#212529", wordBreak: "break-word", textDecoration: isComplete ? "line-through" : "none" }}>{n.label}</div>
+                  <div style={{ fontSize: 12, color: isComplete ? "#868E96" : "#212529", wordBreak: "break-word" }}>{n.label}</div>
                   {n.notes && <div style={{ fontSize: 10, color: "#868E96", marginTop: 2, fontStyle: "italic" }}>{n.notes.length > 60 ? n.notes.substring(0, 60) + "..." : n.notes}</div>}
                 </div>
               </div>
