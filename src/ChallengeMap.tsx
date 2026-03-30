@@ -1252,14 +1252,13 @@ export default function ChallengeMap() {
           <>
             {!tutorialRevealed.has("action") && (
               <TutorialTooltip
-                targetNodeId="tutorial-constraint-1"
+                targetNodeId="tutorial-goal"
                 positions={positions}
                 panOffset={{ x: pan?.x ?? 0, y: pan?.y ?? 0 }}
-                placement="below"
               >
                 <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>What will you actually do?</h4>
                 <p style={{ margin: 0, fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
-                  Actions are concrete steps. Click <strong style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>+ dep</strong> on this constraint.
+                  Actions are concrete steps. Click <strong style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>+ dep</strong> on the constraint.
                 </p>
               </TutorialTooltip>
             )}
