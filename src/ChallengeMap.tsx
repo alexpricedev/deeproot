@@ -353,7 +353,7 @@ function WelcomeOverlay({ onStart, onSkip }: { onStart: () => void; onSkip: () =
             letterSpacing: "-0.01em",
           }}
         >
-          Every big goal is a system of smaller ones.
+          Every big goal is a system of constraints.
         </h1>
         <p
           style={{
@@ -363,9 +363,10 @@ function WelcomeOverlay({ onStart, onSkip }: { onStart: () => void; onSkip: () =
             margin: "0 0 28px 0",
           }}
         >
-          Deeproot helps you break down ambitious goals into constraints,
-          considerations, and concrete actions. Let's walk through a quick
-          example together.
+          Deeproot is built on Constraint Cascading — a method for organising
+          life around hard, meaningful pursuits.{" "}
+          <a href="#about" style={{ color: "#495057" }}>Read the backstory</a>
+          , or let's walk through a quick example together.
         </p>
         <button
           onClick={onStart}
