@@ -23,7 +23,30 @@ const h2Style: React.CSSProperties = {
 
 export default function FrameworkEssay() {
   return (
-    <div style={{ background: "#ffffff", minHeight: "100vh" }}>
+    <div style={{ background: "#ffffff", minHeight: "100vh", position: "relative" }}>
+      <a
+        href="/"
+        aria-label="Back to challenge map"
+        style={{
+          position: "fixed",
+          top: 16,
+          right: 16,
+          width: 36,
+          height: 36,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "1.25rem",
+          color: "#868E96",
+          textDecoration: "none",
+          borderRadius: "50%",
+          border: "1px solid #DEE2E6",
+          background: "#ffffff",
+          zIndex: 10,
+        }}
+      >
+        ✕
+      </a>
     <div
       style={{
         maxWidth: 640,
