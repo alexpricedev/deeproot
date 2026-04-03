@@ -23,6 +23,7 @@ const h2Style: React.CSSProperties = {
 
 export default function FrameworkEssay() {
   return (
+    <div style={{ background: "#ffffff", minHeight: "100vh" }}>
     <div
       style={{
         maxWidth: 640,
@@ -180,6 +181,7 @@ export default function FrameworkEssay() {
         </a>{" "}
         to make this visual.
       </p>
+    </div>
     </div>
   );
 }
