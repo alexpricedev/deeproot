@@ -291,6 +291,19 @@ function EditPanel({ node, onUpdate, onDelete, onAddChild, onClose, autoFocusLab
           </button>
         ))}
       </div>
+      {!isGoal && (
+        <div style={{
+          fontSize: 10, lineHeight: 1.5, margin: "-4px 0 12px 0",
+          padding: "6px 10px", borderRadius: 6,
+          background: NODE_TYPES[node.type].bg,
+          color: NODE_TYPES[node.type].color,
+          border: "none",
+        }}>
+          {node.type === "constraint" && "A hard requirement. If this fails, the goal fails. e.g. \"Need visa approval\""}
+          {node.type === "consideration" && "Something that matters but won't kill the goal if imperfect. e.g. \"Learn the local language\""}
+          {node.type === "action" && "A concrete, completable task. e.g. \"Book flight by March 15\""}
+        </div>
+      )}
 
       <label style={{ fontSize: 10, color: "#868E96", display: "block", marginBottom: 4 }}>Status</label>
       <div style={{ display: "flex", gap: 4, marginBottom: 12, flexWrap: "wrap" }}>
@@ -657,7 +670,7 @@ function ResumePrompt({ onLoad, onNew }: { onLoad: () => void; onNew: () => void
         <p style={{ fontSize: 14, color: "#495057", lineHeight: 1.6, marginBottom: 24 }}>
           We found a previous Deeproot. Want to pick up where you left off?
         </p>
-        <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "center" }}>
           <button
             onClick={onLoad}
             style={{
@@ -668,15 +681,340 @@ function ResumePrompt({ onLoad, onNew }: { onLoad: () => void; onNew: () => void
           >
             Load previous map
           </button>
+          <span style={{ fontSize: 13, color: "#ADB5BD" }}>or</span>
           <button
             onClick={onNew}
             style={{
-              fontSize: 14, padding: "12px 24px", background: "none",
-              border: "1px solid #DEE2E6", borderRadius: 8, color: "#495057",
+              fontSize: 14, padding: "12px 24px", background: "#FFFFFF",
+              border: "2px solid #CED4DA", borderRadius: 8, color: "#495057",
               cursor: "pointer",
             }}
           >
             Start fresh
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const AI_PROMPT = `You are a thinking partner helping someone build a Constraint Cascade — a framework for organising life around hard, meaningful pursuits.
+
+The idea is simple: put the hard thing at the top, then recursively ask "what does this depend on?" until you hit things that are concrete and actionable. The result is a dependency tree that makes invisible blockers visible and gives clear permission to deprioritise anything outside the hierarchy.
+
+Your job is to guide the user through building their cascade conversationally, one question at a time. Do not rush. Do not dump a big list. Ask, listen, go deeper.
+
+## Opening Message
+Start every conversation with this:
+
+"I'm going to help you build a Constraint Cascade — a map of everything your goal actually depends on. We'll work through it together one question at a time. At the end, I'll give you something you can paste straight into Deeproot to see it visually.
+
+Let's start: what's the hard thing you want to organise your life around?"
+
+## How the conversation flows
+
+### Phase 1: The Goal
+Help them sharpen their answer into something specific and honest. "Get fit" is too vague. "Complete a solo cross-country paragliding flight" is good. The goal should feel slightly scary. There is only one goal per map.
+
+Once confirmed, create the root node internally as type "goal", status "active".
+
+### Phase 2: First-Level Dependencies
+Ask: "What does [goal] actually need in order to happen? Think about the big things that have to be true for this to work."
+
+Let them brainstorm. Gently prompt across categories if they stall:
+- Physical (health, fitness, injury status)
+- Financial (budget, income, costs)
+- Temporal (time, schedule flexibility, seasonality)
+- Logistical (location, transport, equipment, access)
+- Relational (people whose plans affect yours)
+- Competence (skills, ratings, certifications, currency)
+
+Don't force categories. Some won't apply. The user knows their situation better than you do.
+
+Each dependency becomes a node. Help them decide the type:
+- "constraint" = hard requirement, non-negotiable (e.g. "must hold current rating")
+- "consideration" = soft factor, matters but flexible (e.g. "prefer to fly with a buddy")
+- "action" = concrete step they can take (e.g. "book annual check-up")
+
+### Phase 3: Going Deeper
+For each first-level dependency, ask: "And what does [this dependency] depend on?"
+
+Go one branch at a time. Keep it conversational. Typical depth is 2-4 levels. Stop when you hit either:
+- Something the user can act on today (make it an "action")
+- Something outside their control (note it but don't go deeper)
+
+After completing a branch, move to the next first-level dependency.
+
+### Phase 4: Failure Analysis (Optional)
+Once the main tree feels solid, offer this: "Want to stress-test this? Think of the last time you wanted to [goal] but couldn't. What stopped you? We can trace that through your tree to see if there's a gap."
+
+If they engage, walk the failure backward and see if it maps to existing nodes or reveals missing ones. Add any new dependencies that surface.
+
+### Phase 5: Status Check
+Walk through the nodes and ask the user to set a status for each:
+- "open" = not started, not urgent
+- "active" = currently being worked on or monitored
+- "blocked" = stuck, can't progress
+- "done" = sorted
+
+Don't agonise over this. First instinct is fine. They can update later.
+
+### Phase 6: Output
+When the user is happy with their cascade, say:
+
+"Here's your cascade ready to import into Deeproot. Copy everything inside the block below and paste it into the import field in Deeproot."
+
+Then output the structure inside a single code block matching this exact schema:
+
+{
+  "nodes": [
+    {
+      "id": "short-unique-id",
+      "label": "Display text",
+      "type": "goal | constraint | consideration | action",
+      "status": "open | active | blocked | done",
+      "notes": "Optional context or detail"
+    }
+  ],
+  "edges": [
+    {
+      "from": "child-node-id",
+      "to": "parent-node-id"
+    }
+  ]
+}
+
+Rules:
+- Exactly one node with type "goal"
+- Every other node must connect upward to the goal through edges (no orphans)
+- Edge direction: "from" = the dependency, "to" = the thing it supports
+- IDs should be short and readable (e.g. "site-access", "bhpa-membership", "budget")
+- Keep labels concise — under 8 words where possible
+- Do not refer to the output as "JSON" or use any technical terminology. It's just "your cascade" or "the import data".
+
+## Your style
+- Ask one question at a time. Never more than two.
+- Be direct. No filler, no corporate warmth.
+- Use the user's own words back to them when labelling nodes.
+- If they give you a wall of text, help them break it into distinct nodes rather than summarising.
+- Don't suggest things they haven't mentioned unless you're prompting across categories in Phase 2.
+- Never use technical language. The user doesn't need to know about data formats, schemas, or structure. They just copy and paste.
+- The framework is called Constraint Cascading. The tool is called Deeproot. Don't over-explain either.`;
+
+function ImportOverlay({ onImport, onClose }: { onImport: (nodes: MapNode[], edges: MapEdge[]) => void; onClose: () => void }) {
+  const [pasteValue, setPasteValue] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(AI_PROMPT).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const handleImport = () => {
+    const trimmed = pasteValue.trim();
+    if (!trimmed) {
+      setError("Paste your cascade output above.");
+      return;
+    }
+    try {
+      // Try to extract JSON from surrounding text
+      let jsonStr = trimmed;
+      // Strip code blocks if present
+      const codeBlockMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (codeBlockMatch) {
+        jsonStr = codeBlockMatch[1].trim();
+      }
+      // If no code block, try to extract the JSON object from surrounding prose
+      if (!codeBlockMatch) {
+        const jsonMatch = jsonStr.match(/(\{[\s\S]*\})/);
+        if (jsonMatch) {
+          jsonStr = jsonMatch[1].trim();
+        }
+      }
+      const data = JSON.parse(jsonStr);
+      if (!Array.isArray(data.nodes) || !Array.isArray(data.edges)) {
+        setError("That doesn't look right. Make sure you're pasting the complete output from your conversation.");
+        return;
+      }
+      if (data.nodes.length === 0) {
+        setError("No nodes found. Make sure the conversation reached the final output step.");
+        return;
+      }
+      // Validate node shape loosely
+      for (const node of data.nodes) {
+        if (!node.id || !node.label || !node.type) {
+          setError("Some nodes are missing required fields. Try asking your AI to regenerate the output.");
+          return;
+        }
+        if (!NODE_TYPES[node.type]) {
+          setError(`Unknown node type "${node.type}". Valid types are: goal, constraint, consideration, action.`);
+          return;
+        }
+        // Default missing fields
+        if (!node.status) node.status = "open";
+        if (!node.notes) node.notes = "";
+      }
+      onImport(data.nodes, data.edges);
+    } catch {
+      setError("Couldn't read that. Make sure you're pasting the complete output from your conversation.");
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        background: "rgba(248,249,250,0.92)",
+        backdropFilter: "blur(4px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 100,
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        style={{
+          background: "#FFFFFF",
+          borderRadius: 12,
+          padding: "32px 28px",
+          maxWidth: 560,
+          width: "90%",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          maxHeight: "85vh",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+          <div>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: "#212529", margin: 0 }}>Build with AI</h2>
+            <p style={{ fontSize: 13, color: "#868E96", margin: "4px 0 0 0", lineHeight: 1.5 }}>The AI will guide you through a conversation to map what your goal actually depends on. Along the way, you'll see which commitments, habits, and beliefs are genuinely load-bearing, and which ones you have permission to let go of. That clarity is the point. Take your time with it.</p>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ background: "none", border: "none", fontSize: 18, color: "#868E96", cursor: "pointer", padding: "0 4px", lineHeight: 1 }}
+          >
+            &times;
+          </button>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {/* Step 1 */}
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", background: "#E8590C", color: "#fff", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>1</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#212529" }}>Copy this prompt</span>
+            </div>
+            <pre
+              style={{
+                fontSize: 11,
+                lineHeight: 1.5,
+                color: "#495057",
+                background: "#F8F9FA",
+                border: "1px solid #E9ECEF",
+                borderRadius: 8,
+                padding: "12px 14px",
+                margin: "0 0 8px 0",
+                maxHeight: 100,
+                overflow: "auto",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                fontFamily: "'JetBrains Mono', monospace",
+              }}
+            >
+              {AI_PROMPT.substring(0, 300)}...
+            </pre>
+            <button
+              onClick={handleCopy}
+              style={{
+                width: "100%",
+                fontSize: 13,
+                padding: "10px 16px",
+                background: copied ? "#2F9E44" : "#212529",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: 8,
+                cursor: "pointer",
+                fontWeight: 600,
+                fontFamily: "inherit",
+                transition: "background 0.2s",
+              }}
+            >
+              {copied ? "Copied to clipboard!" : "Copy prompt to clipboard"}
+            </button>
+          </div>
+
+          {/* Step 2 */}
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", background: "#E8590C", color: "#fff", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>2</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#212529" }}>Complete the exercise with your AI</span>
+            </div>
+            <p style={{ fontSize: 12, color: "#868E96", margin: "4px 0 0 30px", lineHeight: 1.5 }}>
+              Paste the prompt into Claude, ChatGPT, or any AI assistant and work through the conversation.
+            </p>
+          </div>
+
+          {/* Step 3 */}
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", background: "#E8590C", color: "#fff", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>3</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#212529" }}>Paste the output below</span>
+            </div>
+            <textarea
+              value={pasteValue}
+              onChange={(e) => { setPasteValue(e.target.value); setError(null); }}
+              placeholder='Paste the JSON output from your conversation here...'
+              style={{
+                width: "100%",
+                minHeight: 120,
+                maxHeight: 200,
+                fontSize: 12,
+                fontFamily: "'JetBrains Mono', monospace",
+                padding: "10px 12px",
+                border: error ? "1px solid #C92A2A" : "1px solid #DEE2E6",
+                borderRadius: 8,
+                resize: "vertical",
+                outline: "none",
+                boxSizing: "border-box",
+                lineHeight: 1.5,
+              }}
+              onFocus={(e) => (e.target.style.borderColor = error ? "#C92A2A" : "#1971C2")}
+              onBlur={(e) => (e.target.style.borderColor = error ? "#C92A2A" : "#DEE2E6")}
+            />
+            {error && (
+              <p style={{ fontSize: 12, color: "#C92A2A", margin: "6px 0 0 0" }}>{error}</p>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 10, marginTop: 16, justifyContent: "flex-end" }}>
+          <button
+            onClick={onClose}
+            style={{
+              fontSize: 13, padding: "10px 20px", background: "none",
+              border: "1px solid #DEE2E6", borderRadius: 8, color: "#495057",
+              cursor: "pointer", fontFamily: "inherit",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleImport}
+            style={{
+              fontSize: 13, fontWeight: 600, padding: "10px 20px",
+              background: NODE_TYPES.goal.color, color: "#FFFFFF",
+              border: "none", borderRadius: 8, cursor: "pointer",
+              fontFamily: "inherit", opacity: pasteValue.trim() ? 1 : 0.5,
+            }}
+          >
+            Import
           </button>
         </div>
       </div>
@@ -727,6 +1065,7 @@ export default function ChallengeMap() {
   const [sidebarTab, setSidebarTab] = useState<"edit" | "actions">("edit");
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [saveModalUrl, setSaveModalUrl] = useState<string | null>(null);
+  const [showImport, setShowImport] = useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
 
   const [pan, setPan] = useState<{ x: number; y: number } | null>(null);
@@ -1001,6 +1340,13 @@ export default function ChallengeMap() {
     setSaveModalUrl(url);
   }, [nodes, edges]);
 
+  const handleImport = useCallback((importedNodes: MapNode[], importedEdges: MapEdge[]) => {
+    setNodes(importedNodes);
+    setEdges(importedEdges);
+    setShowImport(false);
+    setSelectedId(null);
+  }, []);
+
   return (
     <div style={{ display: "flex", width: "100%", height: "100vh", background: "#F8F9FA", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", overflow: "hidden" }}>
       <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -1070,6 +1416,14 @@ export default function ChallengeMap() {
               </Tooltip>
             )}
             {tutorialStep === -1 && (
+              <Tooltip label="Import from AI conversation">
+                <button onClick={() => setShowImport(true)}
+                  style={{ fontSize: 10, padding: "4px 10px", background: "none", border: "1px solid #DEE2E6", borderRadius: 3, color: "#868E96", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace" }}>
+                  Import
+                </button>
+              </Tooltip>
+            )}
+            {tutorialStep === -1 && (
               <Tooltip label="Saves whole canvas">
                 <button onClick={exportPng}
                   style={{ fontSize: 10, padding: "4px 10px", background: "none", border: "1px solid #DEE2E6", borderRadius: 3, color: "#868E96", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace" }}>
@@ -1114,18 +1468,27 @@ export default function ChallengeMap() {
             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#868E96" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12 }}><path d="m8 3 4 8 5-5 5 15H2L8 3z"/><path d="M4.14 15.08c2.62-1.57 5.24-1.43 7.86.42 2.74 1.94 5.49 2 8.23.19"/></svg>
             <h2 style={{ fontSize: 20, fontWeight: 700, color: "#212529", marginBottom: 8 }}>Your turn.</h2>
             <p style={{ fontSize: 14, color: "#868E96", marginBottom: 24, lineHeight: 1.5 }}>Pick something you actually want to achieve and break it down into constraints, considerations, and actions.</p>
-            <button
-              onClick={() => {
-                const newId = generateId();
-                newNodeId.current = newId;
-                setNodes([{ id: newId, label: "My goal", type: "goal", status: "open", notes: "" }]);
-                setSelectedId(newId);
-                setSidebarTab("edit");
-              }}
-              style={{ fontSize: 14, padding: "12px 28px", background: NODE_TYPES.goal.color, color: "#FFFFFF", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}
-            >
-              Create your first goal
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "center" }}>
+              <button
+                onClick={() => setShowImport(true)}
+                style={{ fontSize: 14, padding: "12px 28px", background: NODE_TYPES.goal.color, color: "#FFFFFF", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}
+              >
+                Build with AI
+              </button>
+              <span style={{ fontSize: 13, color: "#ADB5BD" }}>or</span>
+              <button
+                onClick={() => {
+                  const newId = generateId();
+                  newNodeId.current = newId;
+                  setNodes([{ id: newId, label: "My goal", type: "goal", status: "open", notes: "" }]);
+                  setSelectedId(newId);
+                  setSidebarTab("edit");
+                }}
+                style={{ fontSize: 14, color: "#495057", background: "#FFFFFF", border: "2px solid #CED4DA", borderRadius: 8, padding: "10px 24px", cursor: "pointer", fontFamily: "inherit", fontWeight: 500 }}
+              >
+                Start from scratch
+              </button>
+            </div>
           </div>
         )}
 
@@ -1191,6 +1554,13 @@ export default function ChallengeMap() {
                 setTutorialStep(1);
               }
             }}
+          />
+        )}
+
+        {showImport && (
+          <ImportOverlay
+            onImport={handleImport}
+            onClose={() => setShowImport(false)}
           />
         )}
 
