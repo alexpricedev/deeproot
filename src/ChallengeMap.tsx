@@ -243,7 +243,7 @@ function NodeCard({
       )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
         {childCount > 0 ? (
-          <span style={{ fontSize: 9, color: "#ADB5BD" }}>{childCount} dep{childCount !== 1 ? "s" : ""}</span>
+          <span style={{ fontSize: 9, color: "#ADB5BD" }}>{childCount} node{childCount !== 1 ? "s" : ""}</span>
         ) : <span />}
         {!hideDep && (
           <button
@@ -252,7 +252,7 @@ function NodeCard({
             onMouseEnter={(e) => { (e.target as HTMLButtonElement).style.borderColor = typeStyle.border; (e.target as HTMLButtonElement).style.color = typeStyle.color; }}
             onMouseLeave={(e) => { (e.target as HTMLButtonElement).style.borderColor = "#DEE2E6"; (e.target as HTMLButtonElement).style.color = "#868E96"; }}
           >
-            + dep
+            + Node
           </button>
         )}
       </div>
@@ -323,7 +323,7 @@ function EditPanel({ node, onUpdate, onDelete, onAddChild, onClose, autoFocusLab
       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
         <button onClick={() => onAddChild(node.id)}
           style={{ fontSize: 10, padding: "6px 12px", background: "#F8F9FA", border: "1px solid #ADB5BD", borderRadius: 4, color: "#495057", cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>
-          + Dep
+          + Node
         </button>
         {!isGoal && <button onClick={() => onDelete(node.id)}
           style={{ fontSize: 10, padding: "6px 12px", background: "none", border: "1px solid #E03131", borderRadius: 4, color: "#E03131", cursor: "pointer", fontFamily: "inherit" }}>
@@ -1204,7 +1204,7 @@ export default function ChallengeMap() {
   const addChild = useCallback((parentId: string) => {
     const newId = generateId();
     newNodeId.current = newId;
-    setNodes((prev) => [...prev, { id: newId, label: "New dependency", type: "constraint", status: "open", notes: "" }]);
+    setNodes((prev) => [...prev, { id: newId, label: "New node", type: "constraint", status: "open", notes: "" }]);
     setEdges((prev) => [...prev, { from: parentId, to: newId }]);
     setSelectedId(newId);
     setSidebarTab("edit");
@@ -1512,7 +1512,7 @@ export default function ChallengeMap() {
                 {[
                   ["Esc", "Deselect node"],
                   ["Delete", "Delete selected node"],
-                  ["Return", "Add dependency"],
+                  ["Return", "Add node"],
                   ["↑", "Go to parent"],
                   ["↓", "Go to child"],
                   ["←  →", "Navigate siblings"],
@@ -1619,7 +1619,7 @@ export default function ChallengeMap() {
               >
                 <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>{"What\u2019s standing in your way?"}</h4>
                 <p style={{ margin: 0, fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
-                  Click <strong style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>+ dep</strong> on the goal card to add a constraint.
+                  Click <strong style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>+ Node</strong> on the goal card to add a constraint.
                 </p>
               </TutorialTooltip>
             )}
@@ -1660,7 +1660,7 @@ export default function ChallengeMap() {
               >
                 <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>What do you need to keep in mind?</h4>
                 <p style={{ margin: 0, fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
-                  Click <strong style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>+ dep</strong> again to add a consideration.
+                  Click <strong style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>+ Node</strong> again to add a consideration.
                 </p>
               </TutorialTooltip>
             )}
@@ -1699,7 +1699,7 @@ export default function ChallengeMap() {
               >
                 <h4 style={{ margin: "0 0 6px 0", fontSize: 14, color: "#212529" }}>What will you actually do?</h4>
                 <p style={{ margin: 0, fontSize: 13, color: "#495057", lineHeight: 1.5 }}>
-                  Actions are concrete steps. Click <strong style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>+ dep</strong> on the constraint.
+                  Actions are concrete steps. Click <strong style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>+ Node</strong> on the constraint.
                 </p>
               </TutorialTooltip>
             )}
