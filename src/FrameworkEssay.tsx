@@ -93,6 +93,23 @@ export default function FrameworkEssay() {
       >
         Organising life around hard things
       </p>
+      <p
+        style={{
+          fontSize: "0.9rem",
+          color: "#868E96",
+          margin: "-2rem 0 2.5rem 0",
+        }}
+      >
+        by{" "}
+        <a
+          href="https://alexprice.dev"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "#868E96" }}
+        >
+          Alex Price
+        </a>
+      </p>
 
       {/* Section 1 */}
       <h2 style={h2Style}>The Failed Session</h2>
