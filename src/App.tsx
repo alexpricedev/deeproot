@@ -4,15 +4,17 @@ import FrameworkEssay from "./FrameworkEssay";
 
 function App() {
   const [view, setView] = useState<"app" | "essay">(
-    window.location.hash === "#about" ? "essay" : "app"
+    window.location.pathname === "/constraint-cascading" ? "essay" : "app"
   );
 
   useEffect(() => {
-    function onHashChange() {
-      setView(window.location.hash === "#about" ? "essay" : "app");
+    function onPopState() {
+      setView(
+        window.location.pathname === "/constraint-cascading" ? "essay" : "app"
+      );
     }
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
   if (view === "essay") return <FrameworkEssay />;

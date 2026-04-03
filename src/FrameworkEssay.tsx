@@ -21,11 +21,20 @@ const h2Style: React.CSSProperties = {
   fontFamily: FONT_STACK,
 };
 
+function navigateTo(path: string) {
+  return (e: React.MouseEvent) => {
+    e.preventDefault();
+    window.history.pushState({}, "", path);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  };
+}
+
 export default function FrameworkEssay() {
   return (
     <div style={{ background: "#ffffff", minHeight: "100vh", position: "relative" }}>
       <a
         href="/"
+        onClick={navigateTo("/")}
         aria-label="Back to challenge map"
         style={{
           position: "fixed",
@@ -59,6 +68,7 @@ export default function FrameworkEssay() {
       {/* Back link */}
       <a
         href="/"
+        onClick={navigateTo("/")}
         style={{
           fontFamily: MONO_STACK,
           fontSize: "0.8rem",
@@ -212,6 +222,7 @@ export default function FrameworkEssay() {
         I built{" "}
         <a
           href="/"
+          onClick={navigateTo("/")}
           style={{
             color: "#868E96",
             textDecoration: "underline",
