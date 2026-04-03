@@ -585,6 +585,65 @@ function SaveModal({ url, onClose }: { url: string; onClose: () => void }) {
   );
 }
 
+function UnsavedWarningModal({ onProceed, onCancel }: { onProceed: () => void; onCancel: () => void }) {
+  return (
+    <div
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        zIndex: 100, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      }}
+    >
+      <div style={{
+        background: "#fff", borderRadius: 12, padding: 28, maxWidth: 420, width: "90%",
+        boxShadow: "0 16px 48px rgba(0,0,0,0.15)", position: "relative",
+      }}>
+        <button
+          onClick={onCancel}
+          style={{
+            position: "absolute", top: 12, right: 12, background: "none",
+            border: "none", fontSize: 18, color: "#868E96", cursor: "pointer",
+          }}
+        >×</button>
+
+        <h3 style={{ margin: "0 0 8px 0", fontSize: 18, fontWeight: 700, color: "#212529" }}>
+          Unsaved changes
+        </h3>
+
+        <p style={{ margin: "0 0 20px 0", fontSize: 13, color: "#495057", lineHeight: 1.6 }}>
+          You have unsaved changes that will stay in this tab. If you close it, your work will be lost. Save first to keep a shareable link.
+        </p>
+
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button
+            onClick={onCancel}
+            style={{
+              padding: "8px 16px", fontSize: 12, fontWeight: 600,
+              background: "none", color: "#495057",
+              border: "1px solid #DEE2E6", borderRadius: 6, cursor: "pointer",
+              fontFamily: "'JetBrains Mono', monospace",
+            }}
+          >
+            Go back
+          </button>
+          <button
+            onClick={onProceed}
+            style={{
+              padding: "8px 16px", fontSize: 12, fontWeight: 600,
+              background: "#212529", color: "#fff",
+              border: "none", borderRadius: 6, cursor: "pointer",
+              fontFamily: "'JetBrains Mono', monospace",
+            }}
+          >
+            Open new project
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ResumePrompt({ onLoad, onNew }: { onLoad: () => void; onNew: () => void }) {
   return (
     <div style={{
@@ -668,6 +727,7 @@ export default function ChallengeMap() {
   const [sidebarTab, setSidebarTab] = useState<"edit" | "actions">("edit");
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [saveModalUrl, setSaveModalUrl] = useState<string | null>(null);
+  const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
 
   const [pan, setPan] = useState<{ x: number; y: number } | null>(null);
   const [isPanning, setIsPanning] = useState(false);
@@ -1000,7 +1060,10 @@ export default function ChallengeMap() {
             {tutorialStep === -1 && (
               <Tooltip label="Open in new tab">
                 <button
-                  onClick={() => { window.open(window.location.origin + window.location.pathname + "?new=1", "_blank"); }}
+                  onClick={() => {
+                    if (hasUnsavedChanges) { setShowUnsavedWarning(true); return; }
+                    window.open(window.location.origin + window.location.pathname + "?new=1", "_blank");
+                  }}
                   style={{ fontSize: 10, padding: "4px 10px", background: "none", border: "1px solid #DEE2E6", borderRadius: 3, color: "#868E96", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace" }}>
                   + New
                 </button>
@@ -1439,6 +1502,15 @@ export default function ChallengeMap() {
         </a>
       </div>}
       {saveModalUrl && <SaveModal url={saveModalUrl} onClose={() => setSaveModalUrl(null)} />}
+      {showUnsavedWarning && (
+        <UnsavedWarningModal
+          onProceed={() => {
+            setShowUnsavedWarning(false);
+            window.open(window.location.origin + window.location.pathname + "?new=1", "_blank");
+          }}
+          onCancel={() => setShowUnsavedWarning(false)}
+        />
+      )}
     </div>
   );
 }
