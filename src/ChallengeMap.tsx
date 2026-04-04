@@ -382,13 +382,46 @@ function WelcomeOverlay({ onStart, onSkip }: { onStart: () => void; onSkip: () =
             fontSize: 14,
             color: "#495057",
             lineHeight: 1.6,
-            margin: "0 0 28px 0",
+            margin: "0 0 24px 0",
           }}
         >
           Deeproot helps you break down ambitious goals into constraints,
           considerations, and concrete actions. Let's walk through a quick
           example together.
         </p>
+        <blockquote
+          style={{
+            margin: "0 0 28px 0",
+            padding: "16px 24px",
+            borderLeft: "3px solid #E8590C",
+            background: "#FFF8F5",
+            borderRadius: "0 8px 8px 0",
+            textAlign: "left",
+          }}
+        >
+          <p
+            style={{
+              fontSize: 13,
+              fontStyle: "italic",
+              color: "#495057",
+              lineHeight: 1.6,
+              margin: 0,
+            }}
+          >
+            "The ultimate reason for setting goals is to entice you to become
+            the person it takes to achieve them."
+          </p>
+          <footer
+            style={{
+              fontSize: 11,
+              color: "#868E96",
+              marginTop: 8,
+              fontStyle: "normal",
+            }}
+          >
+            — Jim Rohn
+          </footer>
+        </blockquote>
         <button
           onClick={onStart}
           style={{
