@@ -392,34 +392,51 @@ function WelcomeOverlay({ onStart, onSkip }: { onStart: () => void; onSkip: () =
         <blockquote
           style={{
             margin: "0 0 28px 0",
-            padding: "16px 24px",
-            borderLeft: "3px solid #E8590C",
+            padding: "20px 28px",
+            borderLeft: "4px solid #E8590C",
             background: "#FFF8F5",
             borderRadius: "0 8px 8px 0",
             textAlign: "left",
+            position: "relative" as const,
           }}
         >
+          <span
+            style={{
+              position: "absolute",
+              top: -8,
+              left: 16,
+              fontSize: 48,
+              fontFamily: "Georgia, serif",
+              color: "#E8590C",
+              lineHeight: 1,
+              opacity: 0.6,
+            }}
+          >
+            {"\u201C"}
+          </span>
           <p
             style={{
               fontSize: 13,
-              fontStyle: "italic",
-              color: "#495057",
-              lineHeight: 1.6,
+              fontStyle: "normal",
+              fontWeight: 600,
+              color: "#343A40",
+              lineHeight: 1.7,
               margin: 0,
+              paddingLeft: 8,
             }}
           >
-            "The ultimate reason for setting goals is to entice you to become
-            the person it takes to achieve them."
+            The ultimate reason for setting goals is to entice you to become
+            the person it takes to achieve them.
           </p>
           <footer
             style={{
-              fontSize: 11,
-              color: "#868E96",
-              marginTop: 8,
+              fontSize: 13,
+              color: "#6C757D",
+              marginTop: 10,
               fontStyle: "normal",
             }}
           >
-            — Jim Rohn
+            - Jim Rohn
           </footer>
         </blockquote>
         <button
